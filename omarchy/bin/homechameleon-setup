@@ -1,0 +1,430 @@
+#!/bin/bash
+#
+# homechameleon-setup - configure HomeChameleon for Omarchy.
+#
+# Writes ~/.config/homechameleon/config (chmod 600), installs the Omarchy
+# theme-set hook, and optionally the palette template and a systemd user path
+# unit that also syncs background-only changes. --uninstall reverses it all.
+# Every file is backed up before it is changed or removed.
+#
+# Unofficial community helper. Not affiliated with Omarchy, Basecamp, the Open
+# Home Foundation or ha-chameleon.
+
+set -euo pipefail
+
+PROG="homechameleon-setup"
+SELF_DIR=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
+
+CONFIG_DIR="$HOME/.config/homechameleon"
+CONFIG_FILE="${HOMECHAMELEON_CONFIG:-$CONFIG_DIR/config}"
+STATE_DIR="$HOME/.local/state/homechameleon"
+BACKUP_ROOT="$STATE_DIR/backups"
+HOOK_DIR="$HOME/.config/omarchy/hooks/theme-set.d"
+HOOK_FILE="$HOOK_DIR/homechameleon-sync"
+THEMED_DIR="$HOME/.config/omarchy/themed"
+TEMPLATE_FILE="$THEMED_DIR/homechameleon.json.tpl"
+UNIT_DIR="$HOME/.config/systemd/user"
+PATH_UNIT="$UNIT_DIR/homechameleon-sync.path"
+SERVICE_UNIT="$UNIT_DIR/homechameleon-sync.service"
+
+BACKUP_DIR=""
+
+# Options (non-interactive use and tests).
+INTERACTIVE=1
+DO_UNINSTALL=0
+ASSUME_YES=0
+OPT_URL=""
+OPT_TOKEN_FILE=""
+OPT_STYLE=""
+OPT_NAME=""
+OPT_BACKGROUND=""
+OPT_TEMPLATE=""
+OPT_PATH_UNIT=""
+OPT_HOOK=1
+OPT_TEST=""
+
+usage() {
+  cat <<USAGE
+Usage: $PROG [options]
+       $PROG --uninstall [--yes]
+
+Sets up HomeChameleon for Omarchy: Home Assistant URL and token, style,
+optional background sync, the Omarchy theme-set hook, the optional palette
+template and an optional watcher for background-only changes.
+
+Options for scripted setup (all imply --non-interactive):
+  --url URL               Home Assistant URL, e.g. http://localhost:8123
+  --token-file FILE       Read the long-lived access token from FILE
+                          (or set HOMECHAMELEON_TOKEN in the environment)
+  --style ID              Style id (default: sheer)
+  --name NAME             Theme name in Home Assistant (default: Omarchy;
+                          @theme = follow the Omarchy theme, e.g. "Tokyo Night")
+  --background on|off     Send the desktop background (default: off)
+  --template | --no-template      Install the palette template (default: yes)
+  --path-unit | --no-path-unit    Install the background watcher (default: only with background on)
+  --no-hook               Do not install the Omarchy theme-set hook
+  --test | --no-test      Run a preview request at the end (default: no)
+  --non-interactive       Never prompt
+  --uninstall             Remove everything this tool installed (files are backed up first)
+  --yes                   Do not ask for confirmation
+  -h, --help              Show this help
+USAGE
+}
+
+say() { printf '%s\n' "$*"; }
+die() { printf '%s: %s\n' "$PROG" "$*" >&2; exit 1; }
+
+ask() { # ask "Question" default -> REPLY
+  local prompt="$1" default="${2:-}"
+  if ((INTERACTIVE)); then
+    read -r -p "$prompt${default:+ [$default]}: " REPLY || REPLY=""
+  else
+    REPLY=""
+  fi
+  [[ -n $REPLY ]] || REPLY="$default"
+}
+
+ask_yes_no() { # ask_yes_no "Question" y|n -> status
+  local prompt="$1" default="$2" hint="y/N"
+  [[ $default == "y" ]] && hint="Y/n"
+  if ((INTERACTIVE)); then
+    read -r -p "$prompt [$hint]: " REPLY || REPLY=""
+  else
+    REPLY=""
+  fi
+  REPLY="${REPLY:-$default}"
+  [[ ${REPLY,,} == y || ${REPLY,,} == yes ]]
+}
+
+find_share_file() { # find_share_file <subdir> <name>
+  local candidate
+  for candidate in \
+    "${HOMECHAMELEON_SHARE:-}/$1/$2" \
+    "$SELF_DIR/../$1/$2" \
+    "/usr/share/homechameleon-omarchy/$1/$2"; do
+    [[ -f $candidate ]] && { readlink -f "$candidate"; return 0; }
+  done
+  return 1
+}
+
+sync_bin() {
+  local bin
+  if [[ -x $SELF_DIR/homechameleon-sync ]]; then
+    bin="$SELF_DIR/homechameleon-sync"
+  else
+    bin=$(command -v homechameleon-sync || true)
+  fi
+  [[ -n $bin ]] || die "homechameleon-sync was not found next to $PROG or on PATH"
+  readlink -f "$bin"
+}
+
+# Copy a file into this run's backup folder (path kept relative to HOME).
+backup() {
+  local file="$1" rel
+  [[ -e $file || -L $file ]] || return 0
+  if [[ -z $BACKUP_DIR ]]; then
+    BACKUP_DIR="$BACKUP_ROOT/$(date +%Y%m%d-%H%M%S)-$$"
+    mkdir -p "$BACKUP_DIR"
+    chmod 700 "$BACKUP_ROOT" "$BACKUP_DIR"
+  fi
+  rel="${file#"$HOME"/}"
+  mkdir -p "$BACKUP_DIR/$(dirname "$rel")"
+  cp -a "$file" "$BACKUP_DIR/$rel"
+  say "  backed up $file"
+}
+
+have_user_systemd() {
+  [[ ${HOMECHAMELEON_NO_SYSTEMCTL:-0} != "1" ]] && command -v systemctl >/dev/null 2>&1 &&
+    systemctl --user show-environment >/dev/null 2>&1
+}
+
+config_value() { # config_value KEY -> existing value or empty
+  [[ -f $CONFIG_FILE ]] || return 0
+  sed -nE "s/^[[:space:]]*$1[[:space:]]*=[[:space:]]*\"?([^\"]*)\"?[[:space:]]*$/\1/p" "$CONFIG_FILE" | tail -n1
+}
+
+privacy_note() {
+  cat <<'NOTE'
+
+  Privacy note: with background sync on, your desktop wallpaper is copied into
+  Home Assistant's www folder and served under /local/. Home Assistant serves
+  /local files WITHOUT a login, so anyone who can reach your Home Assistant
+  and knows (or guesses) the file name can download the image. If your
+  instance is exposed to the internet, consider keeping this off.
+  Turn it off again any time with BACKGROUND=0 in the config.
+
+NOTE
+}
+
+# ---------------------------------------------------------------- install
+
+write_config() {
+  local url="$1" token="$2" style="$3" background="$4" name="$5" tmp
+
+  mkdir -p "$(dirname "$CONFIG_FILE")"
+  chmod 700 "$(dirname "$CONFIG_FILE")"
+  backup "$CONFIG_FILE"
+  tmp=$(mktemp "$(dirname "$CONFIG_FILE")/.config.XXXXXX")
+  chmod 600 "$tmp"
+  cat >"$tmp" <<CONFIG
+# HomeChameleon for Omarchy. Keep this file private (chmod 600): it holds a token.
+# Written by homechameleon-setup on $(date '+%Y-%m-%d %H:%M').
+
+# Home Assistant base URL and a long-lived access token from an administrator
+# (Home Assistant: your profile > Security > Long-lived access tokens).
+URL=$url
+TOKEN=$token
+
+# Theme name in Home Assistant. Omarchy (default) keeps one theme that changes
+# with your desktop; @theme gives every Omarchy theme its own Home Assistant
+# theme, named after it (e.g. "Tokyo Night").
+NAME=$name
+
+# Style id (launch styles: sheer, bubbles, material, starship; run
+# homechameleon-sync --styles for the list your integration offers).
+STYLE=$style
+
+# 1 = also send the desktop background. Off by default: Home Assistant serves
+# /local files without a login.
+BACKGROUND=$background
+BG_BLUR=0
+BG_DIM=0.0
+MAX_EDGE=2560
+
+# Extras and behaviour.
+BUBBLE=1
+MUSHROOM=1
+CARD_MOD=0
+CONTRAST=AA
+APPLY=1
+SET_DEFAULT=1
+TIMEOUT=30
+CONFIG
+  mv -f "$tmp" "$CONFIG_FILE"
+  chmod 600 "$CONFIG_FILE"
+  say "  wrote $CONFIG_FILE (mode 600)"
+}
+
+install_hook() {
+  local bin="$1" tmpdir wrapper
+  tmpdir=$(mktemp -d)
+  wrapper="$tmpdir/homechameleon-sync"
+  printf '#!/bin/bash\nexec %q --if-changed "$@"\n' "$bin" >"$wrapper"
+
+  backup "$HOOK_FILE"
+  if command -v omarchy >/dev/null 2>&1 && [[ ${HOMECHAMELEON_NO_OMARCHY_CLI:-0} != "1" ]]; then
+    omarchy hook install theme-set "$wrapper" >/dev/null
+  elif command -v omarchy-hook-install >/dev/null 2>&1 && [[ ${HOMECHAMELEON_NO_OMARCHY_CLI:-0} != "1" ]]; then
+    omarchy-hook-install theme-set "$wrapper" >/dev/null
+  else
+    # Same result as `omarchy hook install theme-set <file>`.
+    mkdir -p "$HOOK_DIR"
+    cp -- "$wrapper" "$HOOK_FILE"
+    chmod 755 "$HOOK_FILE"
+  fi
+  rm -rf "$tmpdir"
+  [[ -f $HOOK_FILE ]] || die "the hook was not installed at $HOOK_FILE"
+  say "  installed theme-set hook $HOOK_FILE"
+}
+
+install_template() {
+  local source
+  source=$(find_share_file templates homechameleon.json.tpl) || die "templates/homechameleon.json.tpl not found"
+  mkdir -p "$THEMED_DIR"
+  backup "$TEMPLATE_FILE"
+  cp -- "$source" "$TEMPLATE_FILE"
+  chmod 644 "$TEMPLATE_FILE"
+  say "  installed palette template $TEMPLATE_FILE (rendered on the next theme switch)"
+}
+
+install_path_unit() {
+  local bin="$1" path_src service_src
+  path_src=$(find_share_file systemd homechameleon-sync.path) || die "systemd/homechameleon-sync.path not found"
+  service_src=$(find_share_file systemd homechameleon-sync.service) || die "systemd/homechameleon-sync.service not found"
+
+  mkdir -p "$UNIT_DIR"
+  backup "$PATH_UNIT"
+  backup "$SERVICE_UNIT"
+  cp -- "$path_src" "$PATH_UNIT"
+  sed "s|@SYNC_BIN@|$bin|" "$service_src" >"$SERVICE_UNIT"
+  chmod 644 "$PATH_UNIT" "$SERVICE_UNIT"
+  say "  installed $PATH_UNIT and $SERVICE_UNIT"
+
+  if have_user_systemd; then
+    systemctl --user daemon-reload
+    if systemctl --user enable --now homechameleon-sync.path >/dev/null 2>&1; then
+      say "  enabled homechameleon-sync.path"
+    else
+      say "  could not enable it; run: systemctl --user enable --now homechameleon-sync.path"
+    fi
+  else
+    say "  no user systemd session; later run: systemctl --user daemon-reload && systemctl --user enable --now homechameleon-sync.path"
+  fi
+}
+
+do_install() {
+  local url token style background want_template want_path_unit bin name
+
+  bin=$(sync_bin)
+  say "HomeChameleon for Omarchy setup (unofficial; not affiliated with Omarchy, Basecamp or the Open Home Foundation)"
+  say ""
+
+  # URL
+  if [[ -n $OPT_URL ]]; then url="$OPT_URL"; else
+    ask "Home Assistant URL" "$(config_value URL || true)"
+    url="${REPLY:-http://localhost:8123}"
+  fi
+  url="${url%/}"
+  [[ $url =~ ^https?://[^[:space:]]+$ ]] || die "the URL must start with http:// or https://"
+
+  # Token
+  token=""
+  if [[ -n $OPT_TOKEN_FILE ]]; then
+    token=$(tr -d '[:space:]' <"$OPT_TOKEN_FILE")
+  elif [[ -n ${HOMECHAMELEON_TOKEN:-} ]]; then
+    token="$HOMECHAMELEON_TOKEN"
+  elif ((INTERACTIVE)); then
+    say "Create a long-lived access token as an administrator in Home Assistant:"
+    say "  your profile > Security > Long-lived access tokens > Create token"
+    read -r -s -p "Paste the token (input hidden; Enter keeps the current one): " token || token=""
+    say ""
+  fi
+  [[ -n $token ]] || token=$(config_value TOKEN || true)
+  [[ -n $token ]] || die "a long-lived access token is required"
+  [[ $token =~ ^[A-Za-z0-9._-]+$ ]] || die "the token contains unexpected characters"
+
+  # Style
+  if [[ -n $OPT_STYLE ]]; then style="$OPT_STYLE"; else
+    ask "Style id (sheer, bubbles, material, starship, ...)" "$(config_value STYLE || true)"
+    style="${REPLY:-sheer}"
+  fi
+  [[ $style =~ ^[A-Za-z0-9_-]+$ ]] || die "the style id may only contain letters, digits, - and _"
+
+  # Theme name
+  if [[ -n $OPT_NAME ]]; then name="$OPT_NAME"; else
+    ask "Theme name in Home Assistant (Omarchy, or @theme to follow each Omarchy theme)" "$(config_value NAME || true)"
+    name="${REPLY:-Omarchy}"
+  fi
+  [[ $name =~ ^[[:print:]]+$ && ${#name} -le 64 ]] || die "the theme name must be 1-64 printable characters"
+
+  # Background (off by default)
+  case "$OPT_BACKGROUND" in
+    on | 1 | yes) background=1 ;;
+    off | 0 | no) background=0 ;;
+    "")
+      background=0
+      if ((INTERACTIVE)); then
+        privacy_note
+        ask_yes_no "Send your desktop background to Home Assistant?" n && background=1
+      fi
+      ;;
+    *) die "--background takes on or off" ;;
+  esac
+  if ((background)) && ! ((INTERACTIVE)); then privacy_note; fi
+  ((background)) && say "Background sync is ON (see the privacy note above)."
+
+  # Template and path unit
+  if [[ -n $OPT_TEMPLATE ]]; then want_template="$OPT_TEMPLATE"; else
+    want_template=0
+    ask_yes_no "Install the palette template (enables --export from Omarchy's own render)?" y && want_template=1
+  fi
+  if [[ -n $OPT_PATH_UNIT ]]; then want_path_unit="$OPT_PATH_UNIT"; else
+    want_path_unit=0
+    local default_unit=n
+    ((background)) && default_unit=y
+    ask_yes_no "Also sync when only the background changes (systemd user path unit)?" "$default_unit" && want_path_unit=1
+  fi
+
+  say ""
+  say "Installing:"
+  write_config "$url" "$token" "$style" "$background" "$name"
+  ((OPT_HOOK)) && install_hook "$bin"
+  ((want_template)) && install_template
+  ((want_path_unit)) && install_path_unit "$bin"
+  [[ -n $BACKUP_DIR ]] && say "  backups: $BACKUP_DIR"
+
+  local run_test="$OPT_TEST"
+  if [[ -z $run_test ]]; then
+    run_test=0
+    ask_yes_no "Test the connection now with a preview (writes nothing)?" y && run_test=1
+  fi
+  if ((run_test)); then
+    say ""
+    if "$bin" --preview --quiet; then
+      say "Preview request succeeded."
+    else
+      say "Preview failed; see $STATE_DIR/sync.log"
+    fi
+  fi
+
+  say ""
+  say "Done. Switch your Omarchy theme, or run: homechameleon-sync"
+  say "In Home Assistant, set your profile theme to the default theme so the synced theme is used."
+}
+
+# ---------------------------------------------------------------- uninstall
+
+remove_file() {
+  local file="$1"
+  [[ -e $file || -L $file ]] || return 0
+  backup "$file"
+  rm -f -- "$file"
+  say "  removed $file"
+}
+
+do_uninstall() {
+  if ! ((ASSUME_YES)); then
+    ((INTERACTIVE)) || die "--uninstall needs --yes when not interactive"
+    ask_yes_no "Remove the HomeChameleon config, hook, template and units? (backups are kept)" n || { say "Nothing changed."; exit 0; }
+  fi
+
+  say "Uninstalling (backups in $BACKUP_ROOT):"
+  if [[ -f $PATH_UNIT ]] && have_user_systemd; then
+    systemctl --user disable --now homechameleon-sync.path >/dev/null 2>&1 || true
+  fi
+  remove_file "$PATH_UNIT"
+  remove_file "$SERVICE_UNIT"
+  if have_user_systemd; then systemctl --user daemon-reload || true; fi
+  remove_file "$HOOK_FILE"
+  remove_file "$TEMPLATE_FILE"
+  remove_file "$HOME/.local/state/omarchy/current/theme/homechameleon.json"
+  remove_file "$CONFIG_FILE"
+  rmdir "$CONFIG_DIR" 2>/dev/null || true
+  rm -f "$STATE_DIR/last-sent.sha256" "$STATE_DIR/sync.lock"
+  [[ -n $BACKUP_DIR ]] && say "  backups: $BACKUP_DIR"
+  say "Done. The log ($STATE_DIR/sync.log) and backups were kept."
+  say "The theme stays in Home Assistant; remove it from the HomeChameleon panel if you like."
+}
+
+# ---------------------------------------------------------------- main
+
+while (($# > 0)); do
+  case "$1" in
+    --url) OPT_URL="${2:?--url needs a value}"; INTERACTIVE=0; shift ;;
+    --token-file) OPT_TOKEN_FILE="${2:?--token-file needs a value}"; INTERACTIVE=0; shift ;;
+    --name) OPT_NAME="${2:?--name needs a value}"; INTERACTIVE=0; shift ;;
+    --style) OPT_STYLE="${2:?--style needs a value}"; INTERACTIVE=0; shift ;;
+    --background) OPT_BACKGROUND="${2:?--background needs on or off}"; INTERACTIVE=0; shift ;;
+    --template) OPT_TEMPLATE=1 ;;
+    --no-template) OPT_TEMPLATE=0 ;;
+    --path-unit) OPT_PATH_UNIT=1 ;;
+    --no-path-unit) OPT_PATH_UNIT=0 ;;
+    --no-hook) OPT_HOOK=0 ;;
+    --test) OPT_TEST=1 ;;
+    --no-test) OPT_TEST=0 ;;
+    --non-interactive) INTERACTIVE=0 ;;
+    --uninstall) DO_UNINSTALL=1 ;;
+    --yes | -y) ASSUME_YES=1 ;;
+    -h | --help) usage; exit 0 ;;
+    *) die "unknown option $1 (see --help)" ;;
+  esac
+  shift
+done
+
+[[ -t 0 ]] || INTERACTIVE=0
+
+if ((DO_UNINSTALL)); then
+  do_uninstall
+else
+  do_install
+fi

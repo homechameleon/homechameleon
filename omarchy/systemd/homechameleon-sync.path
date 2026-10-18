@@ -1,0 +1,11 @@
+[Unit]
+Description=HomeChameleon for Omarchy: watch the desktop background
+
+[Path]
+# Omarchy v4 replaces this symlink when the background changes
+# (omarchy theme bg next / bg set), which fires no theme-set hook.
+PathChanged=%h/.local/state/omarchy/current/background
+Unit=homechameleon-sync.service
+
+[Install]
+WantedBy=default.target

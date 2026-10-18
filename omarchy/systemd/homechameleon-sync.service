@@ -1,0 +1,8 @@
+[Unit]
+Description=HomeChameleon for Omarchy: sync the current palette and background to Home Assistant
+
+[Service]
+Type=oneshot
+# Let a theme switch finish swapping files before reading them.
+ExecStartPre=/usr/bin/sleep 2
+ExecStart=@SYNC_BIN@ --if-changed --quiet

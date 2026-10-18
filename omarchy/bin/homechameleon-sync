@@ -1,0 +1,648 @@
+#!/bin/bash
+#
+# homechameleon-sync - send the current Omarchy palette (and, if enabled, the
+# desktop background) to the HomeChameleon integration in Home Assistant.
+#
+# Part of HomeChameleon for Omarchy, an unofficial community helper. Not
+# affiliated with Omarchy, Basecamp, the Open Home Foundation or ha-chameleon.
+#
+# Runs as an Omarchy theme-set hook. A failed sync never breaks a theme switch:
+# in the default (generate) mode problems are logged and the exit status is 0,
+# unless --strict is given or HOMECHAMELEON_STRICT=1.
+
+set -uo pipefail
+
+VERSION="0.1.0"
+PROG="homechameleon-sync"
+
+CONFIG_FILE="${HOMECHAMELEON_CONFIG:-$HOME/.config/homechameleon/config}"
+STATE_DIR="$HOME/.local/state/homechameleon"
+LOG_FILE="$STATE_DIR/sync.log"
+LAST_SENT_FILE="$STATE_DIR/last-sent.sha256"
+OMARCHY_CURRENT="$HOME/.local/state/omarchy/current"
+THEME_DIR="$OMARCHY_CURRENT/theme"
+COLORS_FILE="$THEME_DIR/colors.toml"
+RENDERED_JSON="$THEME_DIR/homechameleon.json"
+BACKGROUND_LINK="$OMARCHY_CURRENT/background"
+THEME_NAME_FILE="$OMARCHY_CURRENT/theme.name"
+LOG_MAX_BYTES=1048576
+
+# Defaults; overridden by the config file.
+URL=""
+TOKEN=""
+NAME="Omarchy"
+STYLE="sheer"
+BACKGROUND=0
+BG_BLUR=0
+BG_DIM=0.0
+MAX_EDGE=2560
+BUBBLE=1
+MUSHROOM=1
+CARD_MOD=0
+CONTRAST="AA"
+APPLY=1
+SET_DEFAULT=1
+TIMEOUT=30
+INSECURE=0
+
+ACTION="generate"
+EXPORT_DIR=""
+STRICT="${HOMECHAMELEON_STRICT:-0}"
+QUIET=0
+IF_CHANGED=0
+WITH_WALLPAPER=0
+FULL_PAYLOAD=0
+HOOK_THEME=""
+
+WORK_DIR=""
+
+usage() {
+  cat <<USAGE
+Usage: $PROG [mode] [options] [theme-name]
+
+Send the current Omarchy palette to HomeChameleon in Home Assistant.
+
+Modes (default: generate):
+  (none)            POST to <url>/api/homechameleon/generate (writes and applies the theme)
+  --preview         POST to <url>/api/homechameleon/preview (writes nothing)
+  --styles          GET <url>/api/homechameleon/styles and list the styles
+  --export [DIR]    Write a homechameleon-palette/1 JSON file (default DIR: ~/Downloads)
+  --dry-run         Print the request body instead of sending it
+
+Options:
+  --if-changed      Skip the request if nothing changed since the last successful sync
+  --with-wallpaper  With --export: also write the background as WebP, even if BACKGROUND=0
+  --full            With --dry-run: print image data in full instead of a placeholder
+  --strict          Exit non-zero when a sync fails (default: log and exit 0)
+  --quiet           Only log, print nothing on success
+  -h, --help        Show this help
+  --version         Show the version
+
+Config: $CONFIG_FILE (keep it chmod 600; run homechameleon-setup to create it)
+Log:    $LOG_FILE
+USAGE
+}
+
+# ---------------------------------------------------------------- logging
+
+log() {
+  mkdir -p "$STATE_DIR" 2>/dev/null || return 0
+  if [[ -f $LOG_FILE ]] && (($(stat -c %s "$LOG_FILE" 2>/dev/null || echo 0) > LOG_MAX_BYTES)); then
+    mv -f "$LOG_FILE" "$LOG_FILE.1" 2>/dev/null
+  fi
+  printf '%s [%s] %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$1" "$2" >>"$LOG_FILE" 2>/dev/null
+}
+
+info() {
+  log info "$1"
+  ((QUIET)) || printf '%s\n' "$1"
+}
+
+warn() {
+  log warn "$1"
+  printf '%s: %s\n' "$PROG" "$1" >&2
+}
+
+notify() {
+  # Desktop notification when available; never required.
+  command -v notify-send >/dev/null 2>&1 || return 0
+  notify-send -a HomeChameleon "$1" "$2" >/dev/null 2>&1 || true
+}
+
+# A failure in generate mode is soft unless --strict.
+fail() {
+  local msg="$1" code="${2:-1}"
+  log error "$msg"
+  printf '%s: %s\n' "$PROG" "$msg" >&2
+  if [[ $ACTION == "generate" && $STRICT != "1" ]]; then
+    exit 0
+  fi
+  exit "$code"
+}
+
+cleanup() {
+  [[ -n $WORK_DIR && -d $WORK_DIR ]] && rm -rf "$WORK_DIR"
+}
+trap cleanup EXIT
+
+# ---------------------------------------------------------------- config
+
+# The config is KEY=value lines. It is parsed, never sourced, so it cannot run code.
+load_config() {
+  [[ -f $CONFIG_FILE ]] || return 1
+
+  local perms
+  perms=$(stat -c %a "$CONFIG_FILE" 2>/dev/null || echo "")
+  if [[ -n $perms && $perms != "600" && $perms != "400" ]]; then
+    warn "$CONFIG_FILE is mode $perms; it holds a token, run: chmod 600 $CONFIG_FILE"
+  fi
+
+  local line key value
+  while IFS= read -r line || [[ -n $line ]]; do
+    line="${line%$'\r'}"
+    [[ $line =~ ^[[:space:]]*(#|$) ]] && continue
+    [[ $line == *=* ]] || continue
+    key="${line%%=*}"
+    value="${line#*=}"
+    key="${key//[[:space:]]/}"
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    if [[ $value =~ ^\"(.*)\"$ || $value =~ ^\'(.*)\'$ ]]; then
+      value="${BASH_REMATCH[1]}"
+    fi
+    case "$key" in
+      URL) URL="${value%/}" ;;
+      TOKEN) TOKEN="$value" ;;
+      NAME) NAME="$value" ;;
+      STYLE) STYLE="$value" ;;
+      BACKGROUND) BACKGROUND="$value" ;;
+      BG_BLUR) BG_BLUR="$value" ;;
+      BG_DIM) BG_DIM="$value" ;;
+      MAX_EDGE) MAX_EDGE="$value" ;;
+      BUBBLE) BUBBLE="$value" ;;
+      MUSHROOM) MUSHROOM="$value" ;;
+      CARD_MOD) CARD_MOD="$value" ;;
+      CONTRAST) CONTRAST="$value" ;;
+      APPLY) APPLY="$value" ;;
+      SET_DEFAULT) SET_DEFAULT="$value" ;;
+      TIMEOUT) TIMEOUT="$value" ;;
+      INSECURE) INSECURE="$value" ;;
+      *) log warn "unknown config key ignored: $key" ;;
+    esac
+  done <"$CONFIG_FILE"
+  return 0
+}
+
+validate_config() {
+  [[ $BACKGROUND =~ ^[01]$ ]] || { warn "BACKGROUND must be 0 or 1; using 0"; BACKGROUND=0; }
+  if ! [[ $MAX_EDGE =~ ^[0-9]+$ ]] || ((MAX_EDGE < 64 || MAX_EDGE > 2560)); then
+    warn "MAX_EDGE must be 64-2560; using 2560"
+    MAX_EDGE=2560
+  fi
+  [[ $BG_BLUR =~ ^[0-9]+$ ]] || { warn "BG_BLUR must be a whole number; using 0"; BG_BLUR=0; }
+  [[ $BG_DIM =~ ^(0(\.[0-9]+)?|1(\.0+)?)$ ]] || { warn "BG_DIM must be 0.0-1.0; using 0.0"; BG_DIM=0.0; }
+  [[ $TIMEOUT =~ ^[0-9]+$ ]] || TIMEOUT=30
+  [[ $STYLE =~ ^[A-Za-z0-9_-]+$ ]] || fail "STYLE '$STYLE' may only contain letters, digits, - and _" 2
+  local flag
+  for flag in BUBBLE MUSHROOM CARD_MOD APPLY SET_DEFAULT INSECURE; do
+    [[ ${!flag} =~ ^[01]$ ]] || { warn "$flag must be 0 or 1; using 0"; printf -v "$flag" '%s' 0; }
+  done
+}
+
+require_server() {
+  [[ -n $URL ]] || fail "no Home Assistant URL configured (run homechameleon-setup)" 3
+  [[ $URL =~ ^https?:// ]] || fail "URL must start with http:// or https://" 3
+  [[ -n $TOKEN ]] || fail "no long-lived access token configured (run homechameleon-setup)" 3
+}
+
+# ---------------------------------------------------------------- palette
+
+read_mode() {
+  local mode
+  mode=$(sed -nE 's/^[[:space:]]*mode[[:space:]]*=[[:space:]]*"?(light|dark)"?.*/\1/p' "$COLORS_FILE" | head -n1)
+  if [[ -z $mode ]]; then
+    if [[ -f $THEME_DIR/light.mode ]]; then mode="light"; else mode="dark"; fi
+  fi
+  printf '%s' "$mode"
+}
+
+theme_slug() {
+  if [[ -n $HOOK_THEME ]]; then
+    printf '%s' "$HOOK_THEME"
+  elif [[ -f $THEME_NAME_FILE ]]; then
+    tr -cd 'a-z0-9_-' <"$THEME_NAME_FILE"
+  else
+    printf 'omarchy'
+  fi
+}
+
+# "tokyo-night" -> "Tokyo Night", like Omarchy's own theme listing.
+theme_display_name() {
+  local slug word out=""
+  slug=$(theme_slug)
+  for word in ${slug//[-_]/ }; do
+    out+="${out:+ }${word^}"
+  done
+  printf '%s' "${out:-Omarchy}"
+}
+
+# NAME=@theme follows the Omarchy theme; anything else is used as is.
+theme_name_for_request() {
+  if [[ $NAME == "@theme" ]]; then
+    theme_display_name
+  else
+    printf '%s' "${NAME:-Omarchy}"
+  fi
+}
+
+require_palette() {
+  [[ -r $COLORS_FILE ]] || fail "no Omarchy palette at $COLORS_FILE (Omarchy v4 is required)" 4
+}
+
+# The palette keys exported, in order: Omarchy's colors.toml keys plus the
+# ANSI color0-color15 aliases. Same list as templates/homechameleon.json.tpl.
+PALETTE_KEYS='["accent","selection","muted","background","dark_background","darker_background","lighter_background","foreground","dark_foreground","light_foreground","bright_foreground","red","yellow","orange","green","cyan","blue","magenta","brown","bright_red","bright_yellow","bright_green","bright_cyan","bright_blue","bright_magenta","color0","color1","color2","color3","color4","color5","color6","color7","color8","color9","color10","color11","color12","color13","color14","color15"]'
+
+# Flat `key = "#rrggbb"` pairs from colors.toml as a JSON object.
+colors_toml_to_json() {
+  sed -nE 's/^[[:space:]]*([a-z0-9_]+)[[:space:]]*=[[:space:]]*"(#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?)".*/\1\t\2/p' "$COLORS_FILE" |
+    jq -R -s 'split("\n") | map(select(length > 0) | split("\t") | {(.[0]): (.[1] | ascii_downcase)}) | add // {}'
+}
+
+# Fills color0-color15 (and a few base keys) from the flat keys when no Omarchy
+# resolver is available, in the standard ANSI order Omarchy itself uses:
+# background, red, green, yellow, blue, magenta, cyan, foreground, then muted,
+# the bright colours and bright_foreground.
+derive_ansi_colors() {
+  jq '
+    def pick($keys): first($keys[] as $k | .[$k] // empty) // null;
+    . as $c
+    | .foreground //= ($c.color7 // null)
+    | .background //= ($c.color0 // null)
+    | .dark_foreground //= (. | pick(["color8","foreground"]))
+    | .muted //= (. | pick(["color8","dark_foreground","foreground"]))
+    | .bright_foreground //= (. | pick(["color15","foreground"]))
+    | .color0 //= .background
+    | .color1 //= .red
+    | .color2 //= .green
+    | .color3 //= .yellow
+    | .color4 //= .blue
+    | .color5 //= .magenta
+    | .color6 //= .cyan
+    | .color7 //= .foreground
+    | .color8 //= .muted
+    | .color9 //= (. | pick(["bright_red","red"]))
+    | .color10 //= (. | pick(["bright_green","green"]))
+    | .color11 //= (. | pick(["bright_yellow","yellow"]))
+    | .color12 //= (. | pick(["bright_blue","blue"]))
+    | .color13 //= (. | pick(["bright_magenta","magenta"]))
+    | .color14 //= (. | pick(["bright_cyan","cyan"]))
+    | .color15 //= .bright_foreground'
+}
+
+# Writes the resolved palette (a JSON object of PALETTE_KEYS) to stdout and
+# names its source on stderr. Order of preference:
+#   1. Omarchy's render of homechameleon.json.tpl from the last theme switch
+#   2. omarchy-theme-color --all (Omarchy's own resolver)
+#   3. the flat colors.toml keys plus derived ANSI colours
+resolve_palette() {
+  local raw="$WORK_DIR/palette-raw.json"
+
+  if [[ -s $RENDERED_JSON ]] && jq -e '(.schema | tostring | startswith("homechameleon-palette")) and (.colors | type == "object")' "$RENDERED_JSON" >/dev/null 2>&1; then
+    jq '.colors' "$RENDERED_JSON" >"$raw"
+    echo "rendered" >&2
+  elif command -v omarchy-theme-color >/dev/null 2>&1 &&
+    omarchy-theme-color --file "$COLORS_FILE" --all >"$WORK_DIR/resolved.tsv" 2>/dev/null && [[ -s $WORK_DIR/resolved.tsv ]]; then
+    jq -R -s 'split("\n") | map(select(length > 0) | split("\t") | {(.[0]): .[1]}) | add // {}' "$WORK_DIR/resolved.tsv" >"$raw"
+    echo "omarchy-theme-color" >&2
+  else
+    colors_toml_to_json | derive_ansi_colors >"$raw" || return 1
+    echo "colors.toml" >&2
+  fi
+
+  # Same keys, same order and lower-case hex whatever the source, so all three
+  # paths export identical files. Non-colour values are dropped.
+  jq --argjson keys "$PALETTE_KEYS" '
+    . as $c
+    | reduce $keys[] as $k ({};
+        ($c[$k] // null) as $v
+        | if ($v | type) == "string" and ($v | test("^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"))
+          then . + {($k): ($v | ascii_downcase)} else . end)' "$raw"
+}
+
+# ---------------------------------------------------------------- background
+
+is_video() {
+  [[ ${1,,} =~ \.(mp4|m4v|mov|webm|mkv|avi)$ ]]
+}
+
+imagemagick() {
+  if command -v magick >/dev/null 2>&1; then
+    magick "$@"
+  elif command -v convert >/dev/null 2>&1; then
+    convert "$@"
+  else
+    return 127
+  fi
+}
+
+# Writes a WebP (longest edge <= MAX_EDGE) of the current background to $1.
+prepare_background() {
+  local out="$1" source frame
+
+  source=$(readlink -f "$BACKGROUND_LINK" 2>/dev/null || true)
+  if [[ -z $source || ! -f $source ]]; then
+    warn "no desktop background found at $BACKGROUND_LINK"
+    return 1
+  fi
+
+  if is_video "$source"; then
+    command -v ffmpeg >/dev/null 2>&1 || { warn "the background is a video and ffmpeg is not installed"; return 1; }
+    frame="$WORK_DIR/frame.png"
+    if ! ffmpeg -nostdin -v error -y -ss 1 -i "$source" -frames:v 1 "$frame" 2>>"$LOG_FILE" || [[ ! -s $frame ]]; then
+      ffmpeg -nostdin -v error -y -i "$source" -frames:v 1 "$frame" 2>>"$LOG_FILE" || true
+    fi
+    [[ -s $frame ]] || { warn "could not take a frame from $source"; return 1; }
+    source="$frame"
+  fi
+
+  local rc=0
+  imagemagick "${source}[0]" -auto-orient -strip -resize "${MAX_EDGE}x${MAX_EDGE}>" \
+    -quality 82 -define webp:method=4 "webp:$out" 2>>"$LOG_FILE" || rc=$?
+  if ((rc != 0)); then
+    if ((rc == 127)); then
+      warn "ImageMagick is not installed, so the background cannot be converted"
+    else
+      warn "ImageMagick could not convert $source"
+    fi
+    return 1
+  fi
+  [[ -s $out ]]
+}
+
+# ---------------------------------------------------------------- payload
+
+# Builds the frozen v1 request body into $1.
+build_payload() {
+  local out="$1" mode bg_enabled=false images_file="$WORK_DIR/images.json"
+
+  mode=$(read_mode)
+  printf '[]' >"$images_file"
+
+  if [[ $BACKGROUND == "1" ]]; then
+    local webp="$WORK_DIR/background.webp"
+    if prepare_background "$webp" && (($(stat -c %s "$webp") > 10485760)); then
+      # The integration accepts at most 10 MB per image.
+      warn "the converted background is larger than 10 MB; lower MAX_EDGE"
+      rm -f "$webp"
+    fi
+    if [[ -s $webp ]]; then
+      base64 -w 0 "$webp" >"$WORK_DIR/background.b64"
+      jq -n --rawfile data "$WORK_DIR/background.b64" \
+        '[{data: $data, weight: 1.0, use_as_background: true}]' >"$images_file"
+      bg_enabled=true
+      log info "background: $(readlink -f "$BACKGROUND_LINK") -> $(stat -c %s "$webp") bytes WebP"
+    else
+      warn "sending the palette without a background"
+    fi
+  fi
+
+  jq -n \
+    --arg name "$(theme_name_for_request)" \
+    --arg style "$STYLE" \
+    --arg mode "$mode" \
+    --rawfile colors "$COLORS_FILE" \
+    --slurpfile images "$images_file" \
+    --argjson enabled "$bg_enabled" \
+    --argjson blur "$BG_BLUR" \
+    --argjson dim "$BG_DIM" \
+    --argjson max_edge "$MAX_EDGE" \
+    --argjson bubble "$( ((BUBBLE)) && echo true || echo false)" \
+    --argjson mushroom "$( ((MUSHROOM)) && echo true || echo false)" \
+    --argjson card_mod "$( ((CARD_MOD)) && echo true || echo false)" \
+    --arg contrast "$CONTRAST" \
+    --argjson apply "$( ((APPLY)) && echo true || echo false)" \
+    --argjson set_default "$( ((SET_DEFAULT)) && echo true || echo false)" \
+    '{
+      name: $name,
+      style: $style,
+      mode: $mode,
+      palette: {format: "omarchy-colors-toml", data: $colors}
+    }
+    + (if $enabled then {images: $images[0]} else {} end)
+    + {
+      background: {enabled: $enabled, blur: $blur, dim: $dim, max_edge: $max_edge},
+      options: {bubble: $bubble, mushroom: $mushroom, card_mod: $card_mod, contrast: $contrast},
+      apply: $apply,
+      set_default: $set_default
+    }' >"$out"
+}
+
+# ---------------------------------------------------------------- http
+
+# curl reads the Authorization header from a private file, so the token never
+# appears in the process list.
+http_request() {
+  local method="$1" path="$2" body="${3:-}" response="$4"
+  local header_file="$WORK_DIR/auth.header"
+  local -a args=(
+    --silent --show-error
+    --max-time "$TIMEOUT"
+    --connect-timeout 10
+    -X "$method"
+    -H "@$header_file"
+    -H "Accept: application/json"
+    -o "$response"
+    -w '%{http_code}'
+  )
+  ((INSECURE)) && args+=(--insecure)
+  if [[ -n $body ]]; then
+    args+=(-H "Content-Type: application/json" --data-binary "@$body")
+  fi
+
+  (umask 077 && printf 'Authorization: Bearer %s\n' "$TOKEN" >"$header_file")
+  curl "${args[@]}" "$URL$path" 2>>"$LOG_FILE"
+}
+
+explain_status() {
+  case "$1" in
+    000) printf 'could not reach %s (is Home Assistant running?)' "$URL" ;;
+    401) printf 'Home Assistant rejected the token (401); create a new long-lived access token' ;;
+    403) printf 'the token belongs to a non-admin user (403); HomeChameleon needs an administrator' ;;
+    404) printf 'endpoint not found (404); is the HomeChameleon integration installed and set up?' ;;
+    413) printf 'Home Assistant refused the request because the background image is too big (over 10 MB, HTTP 413); lower MAX_EDGE in the config or set BACKGROUND=0' ;;
+    *) printf 'Home Assistant answered HTTP %s' "$1" ;;
+  esac
+}
+
+handle_response() {
+  local kind="$1" response="$2" status="$3"
+
+  if [[ $status != 2* ]]; then
+    local detail=""
+    [[ -s $response ]] && detail=$(jq -r '.message // .error // empty' "$response" 2>/dev/null | head -c 300)
+    log error "response body: $(head -c 2000 "$response" 2>/dev/null)"
+    notify "HomeChameleon sync failed" "$(explain_status "$status")"
+    fail "$kind failed: $(explain_status "$status")${detail:+: $detail}" 5
+  fi
+
+  if ! jq -e 'type == "object"' "$response" >/dev/null 2>&1; then
+    log error "response body: $(head -c 2000 "$response" 2>/dev/null)"
+    fail "$kind returned a response that is not JSON" 6
+  fi
+
+  log info "$kind response: $(jq -c 'del(.palette)' "$response")"
+
+  local theme files applied default_set contrast
+  theme=$(jq -r '.theme // "?"' "$response")
+  files=$(jq -r '(.files // []) | join(", ")' "$response")
+  applied=$(jq -r '.applied // false' "$response")
+  default_set=$(jq -r '.default_set // false' "$response")
+  contrast=$(jq -r 'if .contrast.pass == true then "pass" elif .contrast.pass == false then "FAIL" else "n/a" end' "$response")
+
+  if [[ $kind == "preview" ]]; then
+    info "Preview of theme '$theme' (style $STYLE): contrast $contrast. Nothing was written."
+    ((QUIET)) || jq '.' "$response"
+  else
+    info "Theme '$theme' (style $STYLE): applied=$applied, default=$default_set, contrast $contrast${files:+, files: $files}"
+  fi
+
+  local warning count=0
+  while IFS= read -r warning; do
+    [[ -n $warning ]] || continue
+    count=$((count + 1))
+    warn "Home Assistant: $warning"
+    notify "HomeChameleon" "$warning"
+  done < <(jq -r '(.warnings // [])[] | tostring' "$response")
+
+  if [[ $contrast == "FAIL" ]]; then
+    notify "HomeChameleon" "Theme '$theme' did not pass the $CONTRAST contrast check"
+  fi
+  return 0
+}
+
+# ---------------------------------------------------------------- modes
+
+run_generate_or_preview() {
+  local kind="$1" path payload response status hash
+
+  require_palette
+  require_server
+  path="/api/homechameleon/$kind"
+  payload="$WORK_DIR/payload.json"
+  response="$WORK_DIR/response.json"
+
+  build_payload "$payload" || fail "could not build the request body" 6
+
+  hash=$( { printf '%s\n%s\n' "$kind" "$URL"; cat "$payload"; } | sha256sum | cut -d' ' -f1)
+  if ((IF_CHANGED)) && [[ $kind == "generate" && -f $LAST_SENT_FILE && $(<"$LAST_SENT_FILE") == "$hash" ]]; then
+    log info "unchanged since the last sync; skipped (theme $(theme_slug))"
+    exit 0
+  fi
+
+  log info "$kind: theme $(theme_slug), style $STYLE, mode $(jq -r .mode "$payload"), background $(jq -r .background.enabled "$payload"), $(stat -c %s "$payload") bytes -> $URL$path"
+  status=$(http_request POST "$path" "$payload" "$response")
+  handle_response "$kind" "$response" "$status"
+
+  if [[ $kind == "generate" ]]; then
+    printf '%s\n' "$hash" >"$LAST_SENT_FILE"
+  fi
+}
+
+run_dry_run() {
+  require_palette
+  local payload="$WORK_DIR/payload.json"
+  build_payload "$payload" || fail "could not build the request body" 6
+  if ((FULL_PAYLOAD)); then
+    jq '.' "$payload"
+  else
+    jq 'if .images then .images |= map(.data |= "<base64 WebP, \(length) characters>") else . end' "$payload"
+  fi
+  log info "dry run: printed the request body for theme $(theme_slug)"
+}
+
+run_styles() {
+  require_server
+  local response="$WORK_DIR/styles.json" status
+  status=$(http_request GET "/api/homechameleon/styles" "" "$response")
+  if [[ $status != 2* ]]; then
+    fail "listing styles failed: $(explain_status "$status")" 5
+  fi
+  # Accept a bare list or {styles: [...]}; entries may be strings or objects.
+  jq -r '(if type == "array" then . else (.styles // []) end)[]
+         | if type == "string" then .
+           else "\(.id // .name)\t\(.name // .label // "")\t\(.description // "")" end' "$response" ||
+    fail "the styles response was not understood" 6
+  log info "listed styles from $URL"
+}
+
+run_export() {
+  require_palette
+  local dir="${EXPORT_DIR:-$HOME/Downloads}" slug palette file mode source
+
+  mkdir -p "$dir" || fail "cannot create $dir" 7
+  slug=$(theme_slug)
+  mode=$(read_mode)
+  palette="$WORK_DIR/palette.json"
+
+  resolve_palette >"$WORK_DIR/colors.json" 2>"$WORK_DIR/source" || fail "could not read $COLORS_FILE" 6
+  source=$(<"$WORK_DIR/source")
+  log info "export: palette from $source"
+  jq -n --arg theme "$slug" --arg mode "$mode" --slurpfile colors "$WORK_DIR/colors.json" \
+    '{schema: "homechameleon-palette/1", source: "omarchy", theme: $theme, mode: $mode, colors: $colors[0]}' >"$palette"
+
+  if [[ $BACKGROUND == "1" || $WITH_WALLPAPER == "1" ]]; then
+    local webp="$dir/homechameleon-$slug-background.webp"
+    if prepare_background "$WORK_DIR/export.webp"; then
+      cp "$WORK_DIR/export.webp" "$webp"
+      jq --arg file "${webp##*/}" '. + {background_file: $file}' "$palette" >"$palette.tmp" && mv "$palette.tmp" "$palette"
+      info "Wrote $webp"
+    fi
+  fi
+
+  file="$dir/homechameleon-palette-$slug.json"
+  cp "$palette" "$file" || fail "cannot write $file" 7
+  info "Wrote $file"
+}
+
+# ---------------------------------------------------------------- main
+
+while (($# > 0)); do
+  case "$1" in
+    --preview) ACTION="preview" ;;
+    --styles) ACTION="styles" ;;
+    --dry-run) ACTION="dry-run" ;;
+    --export)
+      ACTION="export"
+      if [[ ${2:-} != "" && ${2:0:1} != "-" ]]; then
+        EXPORT_DIR="$2"
+        shift
+      fi
+      ;;
+    --export=*) ACTION="export"; EXPORT_DIR="${1#*=}" ;;
+    --if-changed) IF_CHANGED=1 ;;
+    --with-wallpaper) WITH_WALLPAPER=1 ;;
+    --full) FULL_PAYLOAD=1 ;;
+    --strict) STRICT=1 ;;
+    --quiet | -q) QUIET=1 ;;
+    -h | --help) usage; exit 0 ;;
+    --version) printf '%s %s\n' "$PROG" "$VERSION"; exit 0 ;;
+    -*) printf '%s: unknown option %s\n' "$PROG" "$1" >&2; usage >&2; exit 2 ;;
+    *) HOOK_THEME=$(printf '%s' "$1" | tr -cd 'a-z0-9_-') ;; # theme slug passed by omarchy-hook
+  esac
+  shift
+done
+
+for tool in jq curl; do
+  command -v "$tool" >/dev/null 2>&1 || fail "$tool is required but not installed" 8
+done
+
+WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/homechameleon.XXXXXX") || fail "cannot create a temporary directory" 8
+chmod 700 "$WORK_DIR"
+
+if ! load_config; then
+  case "$ACTION" in
+    generate)
+      # Installed but never configured: stay silent during theme switches.
+      log info "no config at $CONFIG_FILE; nothing to do (run homechameleon-setup)"
+      exit 0
+      ;;
+    preview | styles) fail "no config at $CONFIG_FILE (run homechameleon-setup)" 3 ;;
+  esac
+fi
+validate_config
+
+# Serialise runs: quick theme switches and the background watcher can overlap.
+if [[ $ACTION == "generate" ]]; then
+  mkdir -p "$STATE_DIR"
+  exec 9>"$STATE_DIR/sync.lock"
+  flock -w 60 9 || fail "another sync is still running" 9
+fi
+
+case "$ACTION" in
+  generate) run_generate_or_preview generate ;;
+  preview) run_generate_or_preview preview ;;
+  styles) run_styles ;;
+  dry-run) run_dry_run ;;
+  export) run_export ;;
+esac
