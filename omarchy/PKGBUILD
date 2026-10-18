@@ -1,4 +1,5 @@
 # Maintainer: HomeChameleon contributors <TBD>
+# TODO: fill in Maintainer: <TBD> before any AUR submission.
 #
 # HomeChameleon for Omarchy: syncs the current Omarchy theme to the
 # HomeChameleon integration in Home Assistant. Unofficial; not affiliated
@@ -7,8 +8,9 @@
 # The code lives in the omarchy/ folder of the homechameleon monorepo.
 # Releases of this part are tagged omarchy-vX.Y.Z; the GitHub tarball
 # extracts to homechameleon-omarchy-vX.Y.Z/omarchy.
-# PLACEHOLDER: no repository or release exists yet; the URL and checksum
-# below must be filled in at the first tagged release.
+# PLACEHOLDER: the repository is github.com/homechameleon/homechameleon, but no
+# omarchy-vX.Y.Z tag or release exists yet, so the source checksum is a
+# placeholder until the first release.
 
 pkgname=homechameleon-omarchy
 pkgver=0.1.0

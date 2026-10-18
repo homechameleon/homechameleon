@@ -1,7 +1,9 @@
 # HomeChameleon for Omarchy: CI for the omarchy/ folder of the monorepo.
-# Kept outside .github on purpose; copy to .github/workflows/omarchy.yml in
-# the homechameleon repository.
+# Bump the Omarchy checkout by changing OMARCHY_REF (a tag such as v4.0.5, or a commit SHA).
 name: omarchy
+
+env:
+  OMARCHY_REF: v4.0.5
 
 on:
   push:
@@ -31,7 +33,7 @@ jobs:
         run: shellcheck omarchy/bin/* omarchy/tests/*.sh
 
       - name: Fetch Omarchy (template renderer and hook runner used by the tests)
-        run: git clone --depth 1 https://github.com/basecamp/omarchy "$RUNNER_TEMP/omarchy"
+        run: git clone --depth 1 --branch "$OMARCHY_REF" https://github.com/basecamp/omarchy "$RUNNER_TEMP/omarchy"
 
       - name: Run tests
         env:
