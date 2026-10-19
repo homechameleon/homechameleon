@@ -11,6 +11,7 @@ pub enum ThemeValue {
 }
 
 pub fn emit(
+    theme_name: &str,
     style_id: &str,
     background_on: bool,
     modes: &[(&str, BTreeMap<String, ThemeValue>)],
@@ -20,12 +21,36 @@ pub fn emit(
     out.push_str("# HomeChameleon theme\n");
     out.push_str(&format!("# style: {style_id}\n"));
     out.push_str(&format!("# background: {background}\n"));
-    out.push_str("modes:\n");
+    // `!include_dir_merge_named` uses this top-level key as the theme name.
+    write_key(&mut out, theme_name);
+    out.push_str(":\n");
+    out.push_str("  modes:\n");
     for (name, vars) in modes {
-        out.push_str(&format!("  {name}:\n"));
-        emit_map(&mut out, vars, 4);
+        out.push_str(&format!("    {name}:\n"));
+        emit_map(&mut out, vars, 6);
     }
     out
+}
+
+fn write_key(out: &mut String, name: &str) {
+    if is_plain_key(name) {
+        out.push_str(name);
+    } else {
+        write_quoted(out, name);
+    }
+}
+
+fn is_plain_key(name: &str) -> bool {
+    let mut chars = name.chars();
+    let Some(first) = chars.next() else {
+        return false;
+    };
+    if !first.is_ascii_alphanumeric() {
+        return false;
+    }
+    name.chars()
+        .all(|c| c.is_ascii_alphanumeric() || c == ' ' || c == '_' || c == '-')
+        && !name.ends_with(' ')
 }
 
 fn emit_map(out: &mut String, vars: &BTreeMap<String, ThemeValue>, indent: usize) {
@@ -99,10 +124,11 @@ mod tests {
             "card-mod-card".into(),
             ThemeValue::Block("ha-card {\n  opacity: 1;\n}".into()),
         );
-        let yaml = emit("sheer", false, &[("dark", dark)]);
+        let yaml = emit("Desk", "sheer", false, &[("dark", dark)]);
+        assert!(yaml.contains("Desk:\n  modes:\n"));
         assert!(yaml.contains("primary-color: \"#7aa2f7\""));
         assert!(yaml.contains("card-mod-card: |"));
-        assert!(yaml.contains("    ha-card {"));
+        assert!(yaml.contains("        ha-card {"));
         assert!(!yaml.contains("lovelace-background"));
     }
 }

@@ -1,4 +1,3 @@
-/** Display name for the `sheer` style. Placeholder until a final name is chosen. */
 export const SHEER_NAME = "Sheer";
 
 export const STYLE_IDS = ["sheer", "bubbles", "material", "starship"] as const;

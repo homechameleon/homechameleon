@@ -47,7 +47,7 @@ fn pyyaml_accepts_every_fixture_theme() {
     std::fs::write(&path, &joined).unwrap();
     let output = std::process::Command::new("python3")
         .arg("-c")
-        .arg("import sys, yaml; docs = list(yaml.safe_load_all(open(sys.argv[1]))); assert docs and all(doc and 'modes' in doc for doc in docs); print(len(docs))")
+        .arg("import sys, yaml; docs = list(yaml.safe_load_all(open(sys.argv[1]))); assert docs and all(doc and any(isinstance(v, dict) and 'modes' in v for v in doc.values()) for doc in docs); print(len(docs))")
         .arg(&path)
         .output()
         .expect("python3");

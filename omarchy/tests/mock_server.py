@@ -85,8 +85,6 @@ class Handler(BaseHTTPRequestHandler):
         warnings = []
         if body.get("style") == "starship":
             warnings.append("Starship Console needs card-mod for the console frame")
-        if body.get("name") == "WarnMe":
-            warnings.append("profile override detected for user dave")
         self._send(200, {
             "theme": body.get("name"),
             "files": [] if preview else files,

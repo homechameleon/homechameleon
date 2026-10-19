@@ -2,6 +2,9 @@
 **/*.rs.bk
 .DS_Store
 *.wasm
+!custom_components/homechameleon/**/*.wasm
+__pycache__/
+*.pyc
 web/node_modules
 web/dist
 web/test-results

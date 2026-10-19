@@ -227,6 +227,15 @@ textarea, .yaml {
   padding: 8px;
 }
 
+.apply-default {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #c5d0de;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 footer {
   display: flex;
   gap: 16px;
