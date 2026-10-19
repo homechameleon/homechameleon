@@ -1,0 +1,61 @@
+# Builds the editor and deploys GitHub Pages. This does not run on push.
+# Pages has to be enabled in the repository settings, with GitHub Actions as
+# the source, before a manual run publishes anything.
+# This repository is homechameleon/homechameleon, so the project site is
+# https://homechameleon.github.io/homechameleon/ and the Vite base is
+# /homechameleon/. A user site at the domain root would be a repository named
+# homechameleon.github.io, which this is not.
+name: pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install wasm-pack
+        working-directory: .
+        run: |
+          curl -fsSL -o /tmp/wasm-pack.tgz -L https://github.com/rustwasm/wasm-pack/releases/download/v0.13.1/wasm-pack-v0.13.1-x86_64-unknown-linux-musl.tar.gz
+          tar -xzf /tmp/wasm-pack.tgz -C /tmp
+          sudo mv /tmp/wasm-pack-v0.13.1-x86_64-unknown-linux-musl/wasm-pack /usr/local/bin/wasm-pack
+      - run: npm ci
+      - run: npm run build:wasm
+      - name: Build for the project site
+        run: npx vite build --base /homechameleon/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,39 @@
+# Same Omarchy checkout as .github/workflows/omarchy.yml (OMARCHY_REF).
+name: qa
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  OMARCHY_REF: v4.0.5
+
+jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          targets: wasm32-wasip1
+      - uses: Swatinem/rust-cache@v2
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
+      - name: Fetch Omarchy themes
+        run: git clone --depth 1 --branch "$OMARCHY_REF" https://github.com/basecamp/omarchy "$RUNNER_TEMP/omarchy"
+      - name: Build the QA binaries
+        run: |
+          cargo build --release -p homechameleon-core --bin hc-qa
+          cargo build --release --target wasm32-wasip1 -p homechameleon-core --bin hc-qa
+      - name: Install wasmtime
+        run: |
+          curl -fsSL https://wasmtime.dev/install.sh | bash -s -- --version v49.0.3
+          echo "$HOME/.wasmtime/bin" >> "$GITHUB_PATH"
+      - name: Run the matrix
+        env:
+          QA_THEMES: ${{ runner.temp }}/omarchy/themes
+        run: scripts/qa-v0.1.sh

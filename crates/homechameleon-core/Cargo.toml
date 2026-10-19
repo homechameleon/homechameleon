@@ -16,6 +16,10 @@ crate-type = ["rlib", "cdylib"]
 name = "hc-fixture"
 path = "src/bin/hc-fixture.rs"
 
+[[bin]]
+name = "hc-qa"
+path = "src/bin/hc-qa.rs"
+
 [features]
 default = []
 # JS bindings. Math stays on the libm backend either way, so native and wasm match.
