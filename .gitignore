@@ -2,3 +2,8 @@
 **/*.rs.bk
 .DS_Store
 *.wasm
+web/node_modules
+web/dist
+web/test-results
+web/playwright-report
+web/src/generated

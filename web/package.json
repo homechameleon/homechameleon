@@ -1,0 +1,27 @@
+{
+  "name": "homechameleon-web",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build:wasm": "wasm-pack build ../crates/homechameleon-core --target web --release --no-opt --out-dir ../../web/src/generated -- --features wasm",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "size": "node scripts/size.mjs"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2",
+    "lit": "^3.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.7",
+    "vitest": "^3.2.4"
+  }
+}
