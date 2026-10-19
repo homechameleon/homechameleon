@@ -2,11 +2,19 @@
 
 Turn your photos into complete Home Assistant themes, in the style you pick.
 
+![HomeChameleon editor](docs/hero.png)
+
 HomeChameleon is not affiliated with or endorsed by the Open Home Foundation or Home Assistant, and is not affiliated with ha-chameleon. ha-chameleon colors RGB lights. HomeChameleon builds dashboard themes.
 
 ## What works today
 
-[`homechameleon-core`](crates/homechameleon-core) reads raw RGBA pixels or a palette and writes one Home Assistant theme file, plus a preview CSS map that uses the same variables.
+The editor in [`web/`](web/) runs in the browser. Drop up to eight photos, or import an Omarchy `colors.toml`, a Base16 scheme, a hex list, or `homechameleon-palette/1` JSON (a `?palette=` link works too). Pick Sheer, Bubbles, Material, or Starship Console, then Dark, Light, or Auto. A sample dashboard follows the CSS variables from the generated theme. Undo, redo, and blueprints stay in this browser.
+
+Export writes a zip with `themes/<slug>.yaml` and an install readme. A wallpaper is included under `www/homechameleon/<slug>/` only when the background toggle is on. It is off by default. An optional card-mod snippet is included only when that extra is on.
+
+Photos never leave the browser. The editor does not upload them and does not ask you to sign in.
+
+[`homechameleon-core`](crates/homechameleon-core) is the generator the editor runs as WebAssembly.
 
 - Extraction uses OKLab k-means for the neutral and Material Color Utilities (quantize and score) for the accent. Modes: normal, pastel, material, colorful, muted. A mood board is a weighted merge of up to eight images.
 - Palettes: Omarchy `colors.toml`, base16, a role map, a hex list, and `homechameleon-palette/1` JSON.
@@ -20,6 +28,7 @@ A background is off unless you turn it on. When it is on, the theme points at `/
 
 ```bash
 cargo test
+cd web && npm ci && npm run build:wasm && npm run dev
 ```
 
 The crate is not published. Theme YAML is emitted by this crate; it does not use `serde_yaml` or `serde_yml`.
@@ -27,3 +36,5 @@ The crate is not published. Theme YAML is emitted by this crate; it does not use
 ## License
 
 Released under the [MIT License](LICENSE). Copyright (c) 2026 HomeChameleon contributors.
+
+The Starship Console sample uses [Antonio](web/public/fonts/Antonio-Bold.woff2), licensed under the SIL Open Font License. The license is in [web/public/fonts/OFL.txt](web/public/fonts/OFL.txt).
