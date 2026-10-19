@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
 from .panel import async_register, async_unregister
 from .repairs import async_check_themes_include
 from .views import async_register_views
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 _VIEWS = "homechameleon_views_registered"
 

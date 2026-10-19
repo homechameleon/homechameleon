@@ -34,3 +34,7 @@ jobs:
         uses: hacs/action@main
         with:
           category: integration
+          # Topics are GitHub repository metadata. This workflow cannot add
+          # them. A repository admin needs to add any topic, then drop this
+          # ignore. Brand images live in custom_components/homechameleon/brand/.
+          ignore: topics

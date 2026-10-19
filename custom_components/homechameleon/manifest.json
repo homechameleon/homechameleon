@@ -5,8 +5,9 @@
   "config_flow": true,
   "documentation": "https://github.com/homechameleon/homechameleon",
   "integration_type": "service",
+  "dependencies": ["http"],
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/homechameleon/homechameleon/issues",
-  "requirements": ["pillow==12.0.0", "wasmtime==49.0.0"],
+  "requirements": ["wasmtime==49.0.0"],
   "version": "0.1.0"
 }

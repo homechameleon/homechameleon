@@ -41,7 +41,7 @@ HomeChameleon does not edit `configuration.yaml`. If those lines are missing, it
 
 4. Go to Settings, then Devices & services, and add HomeChameleon. Open the HomeChameleon sidebar item. That page is limited to administrators.
 
-`POST /api/homechameleon/generate` accepts the same JSON the Omarchy helper sends, or multipart form data. It runs the same `homechameleon-core` WebAssembly module under Wasmtime, after Pillow decodes the images. `POST /api/homechameleon/preview` returns the theme and writes nothing.
+`POST /api/homechameleon/generate` accepts the same JSON the Omarchy helper sends, or multipart form data. It runs the same `homechameleon-core` WebAssembly module under Wasmtime, after Pillow decodes the images. Pillow is the copy Home Assistant already installs, so the manifest does not list it. Wasmtime is the extra requirement. `POST /api/homechameleon/preview` returns the theme and writes nothing.
 
 Home Assistant accepts an HTTP request body of up to 16 MB. A generate request larger than that is rejected by Home Assistant before this integration can answer. Once the body is read, any image over 10 MB is rejected with HTTP 413.
 
