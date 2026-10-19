@@ -43,6 +43,8 @@ HomeChameleon does not edit `configuration.yaml`. If those lines are missing, it
 
 `POST /api/homechameleon/generate` accepts the same JSON the Omarchy helper sends, or multipart form data. It runs the same `homechameleon-core` WebAssembly module under Wasmtime, after Pillow decodes the images. `POST /api/homechameleon/preview` returns the theme and writes nothing.
 
+Home Assistant accepts an HTTP request body of up to 16 MB. A generate request larger than that is rejected by Home Assistant before this integration can answer. Once the body is read, any image over 10 MB is rejected with HTTP 413.
+
 A background is off unless you turn it on. When it is on, the theme points at `/local/homechameleon/…`. Home Assistant serves files under `/local/` without a login, so anyone who can reach the instance and guess the file name can download that wallpaper. The first time `config/www` is created, restart Home Assistant once so `/local/` is served.
 
 ```bash

@@ -262,7 +262,7 @@ async def _generate(hass: HomeAssistant, body: dict[str, Any], *, write: bool) -
             warnings.append(note)
         default_set = False
         if body.get("set_default"):
-            note = await async_set_default_theme(hass, slug)
+            note = await async_set_default_theme(hass, str(result.get("theme") or slug))
             if note:
                 warnings.append(note)
             else:
@@ -370,8 +370,9 @@ class ApplyView(HomeAssistantView):
             return self.json({"error": "yaml is required"}, status_code=400)
         if len(yaml.encode("utf-8")) > MAX_YAML_BYTES:
             return self.json({"error": "yaml is too large"}, status_code=400)
-        name = body.get("name") if isinstance(body.get("name"), str) else "theme"
-        slug = slugify(name)
+        raw_name = body.get("name") if isinstance(body.get("name"), str) else "theme"
+        display = raw_name.strip() or "theme"
+        slug = slugify(display)
         background = body.get("background") if isinstance(body.get("background"), dict) else {}
         enabled = bool(background.get("enabled", False))
         warnings = _dashboard_warning(body)
@@ -408,14 +409,14 @@ class ApplyView(HomeAssistantView):
             warnings.append(note)
         default_set = False
         if body.get("set_default"):
-            note = await async_set_default_theme(hass, slug)
+            note = await async_set_default_theme(hass, display)
             if note:
                 warnings.append(note)
             else:
                 default_set = True
         return self.json(
             {
-                "theme": slug,
+                "theme": display,
                 "files": files,
                 "palette": {},
                 "contrast": {"pass": True, "checks": []},

@@ -179,7 +179,7 @@ async def test_background_on_writes_wallpaper(hass, setup_hc, hass_client):
     assert "/local/homechameleon/desk/" in yaml_text
     calls = hass.data["homechameleon_service_calls"]
     assert ("frontend", "reload_themes", {}) in calls
-    assert ("frontend", "set_theme", {"name": "desk", "name_dark": "desk"}) in calls
+    assert ("frontend", "set_theme", {"name": "Desk", "name_dark": "Desk"}) in calls
 
 
 async def test_preview_writes_nothing(hass, setup_hc, hass_client):
@@ -217,7 +217,7 @@ async def test_generate_yaml_matches_core_golden(hass, setup_hc, hass_client):
     response = await client.post("/api/homechameleon/generate", json=_tokyo_body(apply=True, set_default=False))
     assert response.status == 200
     payload = await response.json()
-    assert payload["theme"] == "tokyo-night"
+    assert payload["theme"] == "Tokyo Night"
     assert payload["contrast"]["pass"] is True
     assert "checks" in payload["contrast"]
     assert set(payload) == {"theme", "files", "palette", "contrast", "applied", "default_set", "warnings"}
@@ -281,7 +281,7 @@ async def test_multipart_generate(hass, setup_hc, hass_client):
     response = await client.post("/api/homechameleon/generate", data=form)
     assert response.status == 200
     payload = await response.json()
-    assert payload["theme"] == "desk"
+    assert payload["theme"] == "Desk"
     assert payload["applied"] is True
     assert not Path(hass.config.path("www", "homechameleon", "desk")).exists()
 
@@ -302,6 +302,51 @@ async def test_missing_themes_include_raises_a_repair(hass, setup_hc):
     assert ir.async_get(hass).async_get_issue(DOMAIN, ISSUE_THEMES_INCLUDE) is None
     assert path.read_text(encoding="utf-8") == THEMES_INCLUDE
     assert original != path.read_text(encoding="utf-8")
+
+
+async def test_merge_named_uses_the_display_name(hass, hass_client):
+    """include_dir_merge_named names the theme from the top-level key."""
+    from homeassistant.components.frontend import DATA_THEMES, _async_setup_themes
+    from homeassistant.config import async_hass_config_yaml
+    from homeassistant.setup import async_setup_component
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    Path(hass.config.path("configuration.yaml")).write_text(
+        "frontend:\n  themes: !include_dir_merge_named themes\n",
+        encoding="utf-8",
+    )
+    themes_dir = Path(hass.config.path("themes"))
+    themes_dir.mkdir(exist_ok=True)
+    for child in themes_dir.iterdir():
+        if child.is_file():
+            child.unlink()
+    assert await async_setup_component(hass, "http", {})
+    loaded = await async_hass_config_yaml(hass)
+    await _async_setup_themes(hass, loaded["frontend"]["themes"])
+    entry = MockConfigEntry(domain=DOMAIN, data={}, title="HomeChameleon")
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    client = await hass_client()
+    response = await client.post(
+        "/api/homechameleon/generate",
+        json=_tokyo_body(name="Omarchy", apply=True, set_default=True),
+    )
+    assert response.status == 200
+    payload = await response.json()
+    assert payload["theme"] == "Omarchy"
+    assert payload["default_set"] is True
+    assert payload["files"] == ["themes/omarchy.yaml"]
+    written = Path(hass.config.path("themes", "omarchy.yaml")).read_text(encoding="utf-8")
+    assert "\nOmarchy:\n  modes:\n" in f"\n{written}"
+    reloaded = await async_hass_config_yaml(hass)
+    themes = reloaded["frontend"]["themes"]
+    assert "Omarchy" in themes
+    assert "modes" not in themes
+    assert "modes" in themes["Omarchy"]
+    assert "Omarchy" in hass.data[DATA_THEMES]
+    assert "modes" not in hass.data[DATA_THEMES]
 
 
 async def test_apply_rejects_a_wallpaper_reference_when_background_is_off(hass, setup_hc, hass_client):

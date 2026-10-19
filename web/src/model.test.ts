@@ -39,22 +39,25 @@ describe("editor helpers", () => {
     expect(freshSnapshot().backgroundEnabled).toBe(false);
     const bytes = buildZip({
       slug: "desk",
-      yaml: "# HomeChameleon theme\n# style: sheer\n# background: off\nmodes:\n  dark:\n    primary-color: \"#ffffff\"\n",
+      yaml: "# HomeChameleon theme\n# style: sheer\n# background: off\nDesk:\n  modes:\n    dark:\n      primary-color: \"#ffffff\"\n",
     });
     const files = unzipSync(bytes);
     expect(Object.keys(files).some((name) => name.startsWith("www/"))).toBe(false);
-    expect(strFromU8(files["themes/desk.yaml"])).toContain("primary-color");
+    const theme = strFromU8(files["themes/desk.yaml"]);
+    expect(theme).toContain("Desk:\n  modes:\n");
+    expect(theme).toContain("primary-color");
     expect(strFromU8(files["README.md"])).toContain("Home Assistant");
     expect(strFromU8(files["README.md"])).not.toMatch(/\bHA\b/);
   });
 
   it("stitches one mode block", () => {
     const yaml = stitchYaml({
-      dark: "# HomeChameleon theme\n# style: bubbles\n# background: off\nmodes:\n  dark:\n    primary-color: \"#fff\"\n",
+      dark: "# HomeChameleon theme\n# style: bubbles\n# background: off\nDesk:\n  modes:\n    dark:\n      primary-color: \"#fff\"\n",
     });
     expect(yaml).toContain("# style: bubbles");
-    expect(yaml).toContain("  dark:");
-    expect(yaml).not.toContain("  light:");
+    expect(yaml.startsWith("# HomeChameleon theme\n")).toBe(true);
+    expect(yaml).toContain("Desk:\n  modes:\n    dark:");
+    expect(yaml).not.toContain("    light:");
   });
 });
 

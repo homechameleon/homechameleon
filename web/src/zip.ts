@@ -5,9 +5,15 @@ export function cardModSnippet(yaml: string): string | null {
   const at = yaml.indexOf(marker);
   if (at < 0 || !yaml.includes("card-mod-theme")) return null;
   const lines = yaml.slice(at + marker.length).split("\n");
+  let indent = 0;
+  for (const line of lines.slice(1)) {
+    if (line.trim() === "") continue;
+    indent = line.match(/^( +)/)?.[1].length ?? 0;
+    break;
+  }
   const body: string[] = [];
   for (const line of lines.slice(1)) {
-    if (line.startsWith("      ")) body.push(line.slice(6));
+    if (indent > 0 && line.startsWith(" ".repeat(indent))) body.push(line.slice(indent));
     else if (line.trim() === "") body.push("");
     else break;
   }

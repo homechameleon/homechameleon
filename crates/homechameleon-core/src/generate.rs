@@ -59,11 +59,22 @@ pub fn generate(request: &GenerateRequest) -> Result<GenerateResult, GenerateErr
         built.push((mode, roles, built_mode.vars, built_mode.card_alpha));
     }
     let slug = crate::types::slugify(&request.name);
+    let display_name = request.name.trim();
+    let display_name = if display_name.is_empty() {
+        "HomeChameleon"
+    } else {
+        display_name
+    };
     let yaml_modes: Vec<(&str, BTreeMap<String, ThemeValue>)> = built
         .iter()
         .map(|(mode, _, vars, _)| (mode.id(), vars.clone()))
         .collect();
-    let yaml = yaml::emit(request.style.id(), request.background.enabled, &yaml_modes);
+    let yaml = yaml::emit(
+        display_name,
+        request.style.id(),
+        request.background.enabled,
+        &yaml_modes,
+    );
     let css = yaml::emit_css(&yaml_modes);
     let contrast = contrast_report(request, &built, backdrop.pixels.as_deref(), backdrop.size);
     let palette_mode = built
@@ -100,7 +111,7 @@ pub fn generate(request: &GenerateRequest) -> Result<GenerateResult, GenerateErr
     }
     dedupe(&mut warnings);
     Ok(GenerateResult {
-        theme: slug.clone(),
+        theme: display_name.to_string(),
         slug: slug.clone(),
         style: request.style,
         files: vec![format!("themes/{slug}.yaml")],

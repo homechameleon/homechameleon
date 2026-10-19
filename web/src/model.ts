@@ -205,19 +205,39 @@ export function readVar(css: string, name: string): string | null {
   return match ? match[1].trim() : null;
 }
 
+function themeKey(yaml: string): string {
+  for (const line of yaml.split("\n")) {
+    if (!line || line.startsWith("#") || line.startsWith(" ")) continue;
+    if (line.endsWith(":")) return line.slice(0, -1);
+  }
+  return "HomeChameleon";
+}
+
+function modeBlock(yaml: string, side: PreviewSide): string | null {
+  const lines = yaml.split("\n");
+  const start = lines.findIndex((line) => line === `    ${side}:`);
+  if (start < 0) return null;
+  const block = [lines[start]];
+  for (const line of lines.slice(start + 1)) {
+    if (/^    (?:dark|light):$/.test(line)) break;
+    block.push(line);
+  }
+  return block.join("\n").trimEnd();
+}
+
 export function stitchYaml(parts: Partial<Record<PreviewSide, string>>): string {
   const blocks: string[] = [];
   for (const side of ["light", "dark"] as const) {
     const yaml = parts[side];
     if (!yaml) continue;
-    const marker = `  ${side}:\n`;
-    const at = yaml.indexOf(marker);
-    if (at >= 0) blocks.push(yaml.slice(at).trimEnd());
+    const block = modeBlock(yaml, side);
+    if (block) blocks.push(block);
   }
   const sample = parts.light ?? parts.dark ?? "";
   const style = sample.match(/# style: (.+)/)?.[1] ?? "sheer";
   const background = sample.match(/# background: (.+)/)?.[1] ?? "off";
-  return `# HomeChameleon theme\n# style: ${style}\n# background: ${background}\nmodes:\n${blocks.join("\n")}\n`;
+  const name = themeKey(sample);
+  return `# HomeChameleon theme\n# style: ${style}\n# background: ${background}\n${name}:\n  modes:\n${blocks.join("\n")}\n`;
 }
 
 export function stitchCss(parts: Partial<Record<PreviewSide, string>>): string {
