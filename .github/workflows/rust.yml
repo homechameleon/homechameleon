@@ -45,7 +45,7 @@ jobs:
           cargo build --release -p homechameleon-core --bin hc-fixture
           cargo build --release --target wasm32-wasip1 -p homechameleon-core --bin hc-fixture
           ./target/release/hc-fixture >/tmp/native.txt
-          curl -fsSL https://wasmtime.dev/install.sh | bash
+          curl -fsSL https://wasmtime.dev/install.sh | bash -s -- --version v49.0.3
           export PATH="$HOME/.wasmtime/bin:$PATH"
           wasmtime run target/wasm32-wasip1/release/hc-fixture.wasm >/tmp/wasm.txt
           diff -u /tmp/native.txt /tmp/wasm.txt
