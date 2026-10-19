@@ -1,0 +1,55 @@
+# Maintainer: HomeChameleon contributors <TBD>
+# TODO: fill in Maintainer: <TBD> before any AUR submission.
+#
+# HomeChameleon for Omarchy: syncs the current Omarchy theme to the
+# HomeChameleon integration in Home Assistant. Unofficial; not affiliated
+# with Omarchy, Basecamp, the Open Home Foundation or ha-chameleon.
+#
+# The code lives in the omarchy/ folder of the homechameleon monorepo.
+# Releases of this part are tagged omarchy-vX.Y.Z; the GitHub tarball
+# extracts to homechameleon-omarchy-vX.Y.Z/omarchy.
+# PLACEHOLDER: the repository is github.com/homechameleon/homechameleon, but no
+# omarchy-vX.Y.Z tag or release exists yet, so the source checksum is a
+# placeholder until the first release.
+
+pkgname=homechameleon-omarchy
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Sync your Omarchy theme (and optionally its background) to Home Assistant via HomeChameleon (unofficial)'
+arch=('any')
+url='https://github.com/homechameleon/homechameleon'
+license=('MIT')
+depends=('bash' 'curl' 'jq')
+optdepends=(
+  'imagemagick: send the desktop background (BACKGROUND=1) and export it as WebP'
+  'ffmpeg: use a frame of a video background'
+  'libnotify: desktop notifications for warnings from Home Assistant'
+  'systemd: sync background-only changes with the optional user path unit'
+)
+source=("$pkgname-$pkgver.tar.gz::https://github.com/homechameleon/homechameleon/archive/refs/tags/omarchy-v$pkgver.tar.gz")
+sha256sums=('SKIP') # PLACEHOLDER: replace with the release tarball checksum
+
+_srcdir() {
+  printf '%s/homechameleon-omarchy-v%s/omarchy' "$srcdir" "$pkgver"
+}
+
+check() {
+  cd "$(_srcdir)"
+  bash -n bin/homechameleon-sync
+  bash -n bin/homechameleon-setup
+}
+
+package() {
+  cd "$(_srcdir)"
+  install -Dm755 bin/homechameleon-sync "$pkgdir/usr/bin/homechameleon-sync"
+  install -Dm755 bin/homechameleon-setup "$pkgdir/usr/bin/homechameleon-setup"
+  install -Dm644 templates/homechameleon.json.tpl \
+    "$pkgdir/usr/share/homechameleon-omarchy/templates/homechameleon.json.tpl"
+  install -Dm644 systemd/homechameleon-sync.path \
+    "$pkgdir/usr/share/homechameleon-omarchy/systemd/homechameleon-sync.path"
+  install -Dm644 systemd/homechameleon-sync.service \
+    "$pkgdir/usr/share/homechameleon-omarchy/systemd/homechameleon-sync.service"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  # Monorepo root LICENSE (GitHub tag tarball root is homechameleon-omarchy-v$pkgver/).
+  install -Dm644 ../LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

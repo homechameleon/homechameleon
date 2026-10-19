@@ -1,0 +1,44 @@
+# HomeChameleon for Omarchy: CI for the omarchy/ folder of the monorepo.
+# Bump the Omarchy checkout by changing OMARCHY_REF (a tag such as v4.0.5, or a commit SHA).
+name: omarchy
+
+env:
+  OMARCHY_REF: v4.0.5
+
+on:
+  push:
+    branches: [main]
+    tags: ["omarchy-v*"]
+    paths: ["omarchy/**", ".github/workflows/omarchy.yml"]
+  pull_request:
+    paths: ["omarchy/**", ".github/workflows/omarchy.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            shellcheck imagemagick ffmpeg jq python3 curl gawk
+
+      - name: Shellcheck
+        run: shellcheck omarchy/bin/* omarchy/tests/*.sh
+
+      - name: Fetch Omarchy (template renderer and hook runner used by the tests)
+        run: git clone --depth 1 --branch "$OMARCHY_REF" https://github.com/basecamp/omarchy "$RUNNER_TEMP/omarchy"
+
+      - name: Run tests
+        env:
+          OMARCHY_CLONE: ${{ runner.temp }}/omarchy
+        run: omarchy/tests/run-tests.sh
+
+      - name: Check PKGBUILD syntax
+        run: bash -n omarchy/PKGBUILD
