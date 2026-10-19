@@ -5,9 +5,21 @@ import { unsafeCSS } from "lit";
 import previewCss from "./preview.css?inline";
 import type { DeviceId, StyleId } from "./names";
 
+const fontHref = new URL("fonts/Antonio-Bold.woff2", document.baseURI).href;
+const FONT_STYLE_ID = "homechameleon-antonio";
+
 @customElement("hc-preview")
 export class HcPreview extends LitElement {
   static styles = unsafeCSS(previewCss);
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (document.getElementById(FONT_STYLE_ID)) return;
+    const style = document.createElement("style");
+    style.id = FONT_STYLE_ID;
+    style.textContent = `@font-face{font-family:Antonio;src:url("${fontHref}") format("woff2");font-weight:700;font-display:swap;}`;
+    document.head.appendChild(style);
+  }
 
   @property() cssText = "";
   @property() wallpaper: string | null = null;

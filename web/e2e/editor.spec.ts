@@ -21,6 +21,24 @@ const palette = {
   },
 };
 
+test("the zip export stays, and Apply appears only in the panel", async ({ page }) => {
+  const fontStatus: number[] = [];
+  page.on("response", (response) => {
+    if (response.url().includes("Antonio-Bold")) fontStatus.push(response.status());
+  });
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Export zip" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Apply", exact: true })).toHaveCount(0);
+
+  await page.goto(`/?panel=1&palette=${encodeURIComponent(JSON.stringify(palette))}`);
+  await page.locator("hc-app[data-ready]").waitFor();
+  await expect(page.getByRole("button", { name: "Export zip" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Apply", exact: true })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Use as the default theme" })).toBeChecked();
+  await page.getByRole("button", { name: "Starship Console" }).click();
+  await expect.poll(() => fontStatus, { timeout: 10_000 }).toContain(200);
+});
+
 test("palette, style, and a slider update the sample preview", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/?palette=${encodeURIComponent(JSON.stringify(palette))}`);

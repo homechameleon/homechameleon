@@ -1,0 +1,19 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "HomeChameleon",
+        "description": "Add HomeChameleon for Home Assistant. One copy is enough for this instance."
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "HomeChameleon is already set up."
+    }
+  },
+  "issues": {
+    "themes_include": {
+      "title": "Theme files are not included yet",
+      "description": "Add these lines to configuration.yaml, then restart Home Assistant:\n\n{lines}\n\nHomeChameleon does not edit that file."
+    }
+  }
+}

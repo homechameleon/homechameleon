@@ -12,7 +12,7 @@ The editor in [`web/`](web/) runs in the browser. Drop up to eight photos, or im
 
 Export writes a zip with `themes/<slug>.yaml` and an install readme. A wallpaper is included under `www/homechameleon/<slug>/` only when the background toggle is on. It is off by default. An optional card-mod snippet is included only when that extra is on.
 
-Photos never leave the browser. The editor does not upload them and does not ask you to sign in.
+In the standalone editor, photos stay in the browser. It does not upload them and it does not ask you to sign in. The Home Assistant API receives an image only when a client posts one.
 
 [`homechameleon-core`](crates/homechameleon-core) is the generator the editor runs as WebAssembly.
 
@@ -24,7 +24,26 @@ Photos never leave the browser. The editor does not upload them and does not ask
 
 The [`omarchy/`](omarchy/) folder is a shell helper for Omarchy. `homechameleon-sync --export` writes `homechameleon-palette/1` JSON from a `colors.toml` file. Details are in [omarchy/README.md](omarchy/README.md).
 
-A background is off unless you turn it on. When it is on, the theme points at `/local/homechameleon/…`. Home Assistant serves files under `/local/` without a login, so anyone who can reach the instance and guess the file name can download that wallpaper.
+## Install on Home Assistant
+
+HomeChameleon also installs as a custom integration through HACS. It adds a sidebar panel named HomeChameleon and an admin-only API. The panel is the same editor. Apply writes the theme the browser already built. The downloadable zip still works if you open the editor on its own.
+
+1. In HACS, add this repository as a custom repository (category: Integration): `https://github.com/homechameleon/homechameleon`
+2. Install HomeChameleon and restart Home Assistant.
+3. Add these lines to `configuration.yaml` once, if they are not already there, then restart again:
+
+```yaml
+frontend:
+  themes: !include_dir_merge_named themes
+```
+
+HomeChameleon does not edit `configuration.yaml`. If those lines are missing, it raises a Repairs issue that shows the same lines.
+
+4. Go to Settings, then Devices & services, and add HomeChameleon. Open the HomeChameleon sidebar item. That page is limited to administrators.
+
+`POST /api/homechameleon/generate` accepts the same JSON the Omarchy helper sends, or multipart form data. It runs the same `homechameleon-core` WebAssembly module under Wasmtime, after Pillow decodes the images. `POST /api/homechameleon/preview` returns the theme and writes nothing.
+
+A background is off unless you turn it on. When it is on, the theme points at `/local/homechameleon/…`. Home Assistant serves files under `/local/` without a login, so anyone who can reach the instance and guess the file name can download that wallpaper. The first time `config/www` is created, restart Home Assistant once so `/local/` is served.
 
 ```bash
 cargo test

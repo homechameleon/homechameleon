@@ -43,6 +43,15 @@ import { buildZip, cardModSnippet } from "./zip";
 
 const BLUEPRINTS_KEY = "homechameleon.blueprints";
 
+function bytesToBase64(bytes: Uint8Array): string {
+  let text = "";
+  const chunk = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunk) {
+    text += String.fromCharCode(...bytes.subarray(index, index + chunk));
+  }
+  return btoa(text);
+}
+
 interface BoardImage {
   id: string;
   name: string;
@@ -102,6 +111,10 @@ export class HcApp extends LitElement {
   @state() private futureCount = 0;
   @state() private dragOver = false;
   @state() private paletteText = "";
+  @state() private applying = false;
+  @state() private applyDefault = true;
+
+  private readonly panelMode = new URLSearchParams(window.location.search).get("panel") === "1";
 
   private readonly bridge = new CoreBridge();
   private readonly bank = new Map<string, BoardImage>();
@@ -183,6 +196,23 @@ export class HcApp extends LitElement {
           <button class="ghost" ?disabled=${this.futureCount === 0} @click=${this.redo}>Redo</button>
           <button class="ghost" @click=${this.saveBlueprint}>Save blueprint</button>
           <button class="primary" ?disabled=${!this.exportYaml} @click=${() => void this.exportZip()}>Export zip</button>
+          ${this.panelMode
+            ? html`
+                <label class="apply-default">
+                  <input
+                    type="checkbox"
+                    .checked=${this.applyDefault}
+                    @change=${(event: Event) => {
+                      this.applyDefault = (event.target as HTMLInputElement).checked;
+                    }}
+                  />
+                  Use as the default theme
+                </label>
+                <button class="primary" ?disabled=${!this.exportYaml || this.applying} @click=${() => void this.applyTheme()}>
+                  Apply
+                </button>
+              `
+            : null}
         </header>
         <div class="body">
           <aside>
@@ -664,6 +694,43 @@ export class HcApp extends LitElement {
     this.bgBytes = encoded.bytes;
     this.bgFileName = `${slug}/bg-${fnv32(image.raw)}.${encoded.ext}`;
     this.bgKey = key;
+  }
+
+  private async applyTheme(): Promise<void> {
+    await this.flush("full");
+    const yaml = this.lockedYaml();
+    if (!yaml) return;
+    if (this.snap.backgroundEnabled) await this.ensureWallpaper();
+    const background =
+      this.snap.backgroundEnabled && this.bgBytes && this.bgFileName
+        ? { enabled: true, path: this.bgFileName, data: bytesToBase64(this.bgBytes) }
+        : { enabled: false };
+    this.applying = true;
+    this.notice = "";
+    try {
+      const response = await fetch("/api/homechameleon/apply", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: this.snap.name,
+          yaml,
+          set_default: this.applyDefault,
+          background,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string; theme?: string; warnings?: string[] };
+      if (!response.ok) {
+        this.notice = payload.error ?? "Apply failed";
+        return;
+      }
+      this.notice = payload.theme ? `Applied ${payload.theme}` : "Applied";
+      if (payload.warnings?.length) this.warnings = [...this.warnings, ...payload.warnings];
+    } catch (error) {
+      this.notice = error instanceof Error ? error.message : "Apply failed";
+    } finally {
+      this.applying = false;
+    }
   }
 
   private async exportZip(): Promise<void> {
