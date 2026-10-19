@@ -1,0 +1,31 @@
+[package]
+name = "homechameleon-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "Palette extraction and Home Assistant theme generation"
+publish = false
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[[bin]]
+name = "hc-fixture"
+path = "src/bin/hc-fixture.rs"
+
+[features]
+default = []
+# JS bindings. Math stays on the libm backend either way, so native and wasm match.
+wasm = ["dep:wasm-bindgen"]
+
+[dependencies]
+libm = "0.2"
+material-colors = { version = "0.5.0", default-features = false, features = ["libm", "quantize"] }
+wasm-bindgen = { version = "0.2", optional = true }
+
+[dev-dependencies]
+saphyr = "0.2"
+serde_json = "1"

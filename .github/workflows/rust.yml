@@ -1,0 +1,51 @@
+name: rust
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown,wasm32-wasip1
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+      - name: Test
+        run: |
+          python3 -m pip install pyyaml
+          cargo test --workspace --all-features
+      - name: cargo-deny
+        run: |
+          curl -fsSL -o /tmp/deny.tgz -L https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz
+          tar -xzf /tmp/deny.tgz -C /tmp
+          /tmp/cargo-deny-0.20.2-x86_64-unknown-linux-musl/cargo-deny check
+      - name: wasm32 build
+        run: cargo build --release --target wasm32-unknown-unknown -p homechameleon-core --lib --features wasm
+      - name: wasm size
+        run: |
+          wasm=target/wasm32-unknown-unknown/release/homechameleon_core.wasm
+          raw=$(stat -c%s "$wasm")
+          gz=$(gzip -c "$wasm" | wc -c)
+          echo "raw=$raw gz=$gz"
+          test "$raw" -le 307200
+          test "$gz" -le 122880
+      - name: Native and wasm output match
+        run: |
+          cargo build --release -p homechameleon-core --bin hc-fixture
+          cargo build --release --target wasm32-wasip1 -p homechameleon-core --bin hc-fixture
+          ./target/release/hc-fixture >/tmp/native.txt
+          curl -fsSL https://wasmtime.dev/install.sh | bash -s -- --version v49.0.3
+          export PATH="$HOME/.wasmtime/bin:$PATH"
+          wasmtime run target/wasm32-wasip1/release/hc-fixture.wasm >/tmp/wasm.txt
+          diff -u /tmp/native.txt /tmp/wasm.txt
