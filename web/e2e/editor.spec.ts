@@ -29,12 +29,16 @@ test("the zip export stays, and Apply appears only in the panel", async ({ page 
   await page.goto("/");
   await expect(page.getByRole("button", { name: "Export zip" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Apply", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: "Apply to" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Undo theme" })).toHaveCount(0);
 
   await page.goto(`/?panel=1&palette=${encodeURIComponent(JSON.stringify(palette))}`);
   await page.locator("hc-app[data-ready]").waitFor();
   await expect(page.getByRole("button", { name: "Export zip" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Apply", exact: true })).toBeVisible();
-  await expect(page.getByRole("checkbox", { name: "Use as the default theme" })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "Use as the default theme" })).not.toBeChecked();
+  await expect(page.getByRole("combobox", { name: "Apply to" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Undo theme" })).toBeDisabled();
   await page.getByRole("button", { name: "Starship Console" }).click();
   await expect.poll(() => fontStatus, { timeout: 10_000 }).toContain(200);
 });

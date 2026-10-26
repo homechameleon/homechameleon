@@ -26,7 +26,7 @@ The [`omarchy/`](omarchy/) folder is a shell helper for Omarchy. `homechameleon-
 
 ## Install on Home Assistant
 
-HomeChameleon also installs as a custom integration through HACS. It adds a sidebar panel named HomeChameleon and an admin-only API. The panel is the same editor. Apply writes the theme the browser already built. The downloadable zip still works if you open the editor on its own.
+HomeChameleon also installs as a custom integration through HACS. It adds a sidebar panel named HomeChameleon and an admin-only API. The panel is the same editor. Apply writes the theme the browser already built. The default-theme checkbox starts off. Apply can target one dashboard view, and Undo theme restores the previous themes. The downloadable zip still works if you open the editor on its own.
 
 1. In HACS, add this repository as a custom repository (category: Integration): `https://github.com/homechameleon/homechameleon`
 2. Install HomeChameleon and restart Home Assistant.
@@ -42,6 +42,10 @@ HomeChameleon does not edit `configuration.yaml`. If those lines are missing, it
 4. Go to Settings, then Devices & services, and add HomeChameleon. Open the HomeChameleon sidebar item. That page is limited to administrators.
 
 `POST /api/homechameleon/generate` accepts the same JSON the Omarchy helper sends, or multipart form data. It runs the same `homechameleon-core` WebAssembly module under Wasmtime, after Pillow decodes the images. Pillow is the copy Home Assistant already installs, so the manifest does not list it. Wasmtime is the extra requirement. `POST /api/homechameleon/preview` returns the theme and writes nothing.
+
+`POST /api/homechameleon/apply` can name one dashboard view (`view.url_path` plus `view.path` or `view.index`). That request records the global theme, each user's theme, and the view's theme, stores a snapshot of the dashboard, then sets the view. `set_default` stays off unless the request sets it. `POST /api/homechameleon/undo` puts the recorded themes back in one step.
+
+Snapshots live in `www/homechameleon/snapshots/`. Administrators can list them, read one, restore a storage dashboard, and delete them at `/api/homechameleon/snapshots`. A YAML dashboard can be copied, and restoring it is refused, because HomeChameleon does not edit that file. Snapshot files are served from `/local/` the same way a wallpaper is.
 
 Home Assistant accepts an HTTP request body of up to 16 MB. A generate request larger than that is rejected by Home Assistant before this integration can answer. Once the body is read, any image over 10 MB is rejected with HTTP 413.
 

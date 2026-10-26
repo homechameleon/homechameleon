@@ -236,6 +236,16 @@ textarea, .yaml {
   white-space: nowrap;
 }
 
+.apply-target {
+  background: #182230;
+  color: inherit;
+  border: 1px solid #2c3c52;
+  border-radius: 8px;
+  padding: 6px 8px;
+  max-width: 16rem;
+  font: inherit;
+}
+
 footer {
   display: flex;
   gap: 16px;

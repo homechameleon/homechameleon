@@ -12,6 +12,20 @@ from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
 
 from .const import MAX_IMAGE_BYTES, MAX_IMAGES, MAX_YAML_BYTES
+from .dashboards import (
+    BindError,
+    async_check_view,
+    async_create_snapshot,
+    async_delete_snapshot,
+    async_finish_apply,
+    async_get_snapshot,
+    async_list_dashboards,
+    async_list_snapshots,
+    async_restore_snapshot,
+    async_undo,
+    async_undo_status,
+    parse_view_target,
+)
 from .engine import (
     DecodedImage,
     EngineError,
@@ -27,7 +41,6 @@ from .engine import (
 from .files import (
     PathError,
     async_reload_themes,
-    async_set_default_theme,
     atomic_write,
     background_path,
     delete_theme_files,
@@ -37,7 +50,18 @@ from .files import (
 
 def async_register_views(hass: HomeAssistant) -> None:
     """Register every HomeChameleon view. All of them require an admin."""
-    for view in (GenerateView, PreviewView, StylesView, ApplyView, DeleteView):
+    for view in (
+        GenerateView,
+        PreviewView,
+        StylesView,
+        ApplyView,
+        DeleteView,
+        DashboardsView,
+        SnapshotsView,
+        SnapshotItemView,
+        SnapshotRestoreView,
+        UndoView,
+    ):
         hass.http.register_view(view)
 
 
@@ -227,6 +251,10 @@ def _dashboard_warning(body: dict[str, Any]) -> list[str]:
 
 
 async def _generate(hass: HomeAssistant, body: dict[str, Any], *, write: bool) -> dict[str, Any]:
+    applying = write and body.get("apply", True)
+    target = parse_view_target(body) if applying else None
+    if target is not None:
+        await async_check_view(hass, target)
     decoded = _decode_images(body)
     core, wallpaper, slug = _core_request(body, decoded)
     try:
@@ -260,14 +288,22 @@ async def _generate(hass: HomeAssistant, body: dict[str, Any], *, write: bool) -
         note = await async_reload_themes(hass)
         if note:
             warnings.append(note)
-        default_set = False
-        if body.get("set_default"):
-            note = await async_set_default_theme(hass, str(result.get("theme") or slug))
-            if note:
-                warnings.append(note)
-            else:
-                default_set = True
-        return _public(result, files=files, applied=True, default_set=default_set, warnings=warnings)
+        bound = await async_finish_apply(
+            hass,
+            theme=str(result.get("theme") or slug),
+            view=target,
+            set_default=bool(body.get("set_default")),
+        )
+        warnings.extend(bound.pop("warnings"))
+        public = _public(
+            result,
+            files=files,
+            applied=True,
+            default_set=bool(bound.pop("default_set")),
+            warnings=warnings,
+        )
+        public.update(bound)
+        return public
     return _public(result, files=files, applied=False, default_set=False, warnings=warnings)
 
 
@@ -288,6 +324,8 @@ class GenerateView(HomeAssistantView):
                 body["apply"] = True
             result = await _generate(request.app["hass"], body, write=True)
         except _BodyError as err:
+            return self.json({"error": str(err)}, status_code=err.status)
+        except BindError as err:
             return self.json({"error": str(err)}, status_code=err.status)
         except PathError as err:
             return self.json({"error": str(err)}, status_code=400)
@@ -370,6 +408,12 @@ class ApplyView(HomeAssistantView):
             return self.json({"error": "yaml is required"}, status_code=400)
         if len(yaml.encode("utf-8")) > MAX_YAML_BYTES:
             return self.json({"error": "yaml is too large"}, status_code=400)
+        try:
+            target = parse_view_target(body)
+            if target is not None:
+                await async_check_view(hass, target)
+        except BindError as err:
+            return self.json({"error": str(err)}, status_code=err.status)
         raw_name = body.get("name") if isinstance(body.get("name"), str) else "theme"
         display = raw_name.strip() or "theme"
         slug = slugify(display)
@@ -407,24 +451,27 @@ class ApplyView(HomeAssistantView):
         note = await async_reload_themes(hass)
         if note:
             warnings.append(note)
-        default_set = False
-        if body.get("set_default"):
-            note = await async_set_default_theme(hass, display)
-            if note:
-                warnings.append(note)
-            else:
-                default_set = True
-        return self.json(
-            {
-                "theme": display,
-                "files": files,
-                "palette": {},
-                "contrast": {"pass": True, "checks": []},
-                "applied": True,
-                "default_set": default_set,
-                "warnings": warnings,
-            }
-        )
+        try:
+            bound = await async_finish_apply(
+                hass,
+                theme=display,
+                view=target,
+                set_default=bool(body.get("set_default")),
+            )
+        except BindError as err:
+            return self.json({"error": str(err)}, status_code=err.status)
+        warnings.extend(bound.pop("warnings"))
+        payload = {
+            "theme": display,
+            "files": files,
+            "palette": {},
+            "contrast": {"pass": True, "checks": []},
+            "applied": True,
+            "default_set": bool(bound.pop("default_set")),
+            "warnings": warnings,
+        }
+        payload.update(bound)
+        return self.json(payload)
 
 
 class DeleteView(HomeAssistantView):
@@ -448,3 +495,125 @@ class DeleteView(HomeAssistantView):
         note = await async_reload_themes(hass)
         warnings = [note] if note else []
         return self.json({"theme": slug, "deleted": True, "warnings": warnings})
+
+
+class DashboardsView(HomeAssistantView):
+    """GET /api/homechameleon/dashboards."""
+
+    url = "/api/homechameleon/dashboards"
+    name = "api:homechameleon:dashboards"
+    requires_auth = True
+
+    async def get(self, request: web.Request) -> web.Response:
+        """List dashboards and the theme on each view."""
+        if (denied := _admin_or_response(request)) is not None:
+            return denied
+        hass: HomeAssistant = request.app["hass"]
+        return self.json({"dashboards": await async_list_dashboards(hass)})
+
+
+class SnapshotsView(HomeAssistantView):
+    """GET and POST /api/homechameleon/snapshots."""
+
+    url = "/api/homechameleon/snapshots"
+    name = "api:homechameleon:snapshots"
+    requires_auth = True
+
+    async def get(self, request: web.Request) -> web.Response:
+        """List dashboard snapshots."""
+        if (denied := _admin_or_response(request)) is not None:
+            return denied
+        hass: HomeAssistant = request.app["hass"]
+        return self.json({"snapshots": await async_list_snapshots(hass)})
+
+    async def post(self, request: web.Request) -> web.Response:
+        """Store a copy of one dashboard config."""
+        if (denied := _admin_or_response(request)) is not None:
+            return denied
+        hass: HomeAssistant = request.app["hass"]
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return self.json({"error": "request JSON could not be read"}, status_code=400)
+        if not isinstance(body, dict):
+            return self.json({"error": "request JSON must be an object"}, status_code=400)
+        try:
+            summary = await async_create_snapshot(hass, body.get("url_path"))
+        except BindError as err:
+            return self.json({"error": str(err)}, status_code=err.status)
+        return self.json(summary)
+
+
+class SnapshotItemView(HomeAssistantView):
+    """GET and DELETE /api/homechameleon/snapshots/<id>."""
+
+    url = "/api/homechameleon/snapshots/{snapshot_id}"
+    name = "api:homechameleon:snapshot"
+    requires_auth = True
+
+    async def get(self, request: web.Request, snapshot_id: str) -> web.Response:
+        """Return one snapshot, including the dashboard config."""
+        if (denied := _admin_or_response(request)) is not None:
+            return denied
+        hass: HomeAssistant = request.app["hass"]
+        try:
+            document = await async_get_snapshot(hass, snapshot_id)
+        except BindError as err:
+            return self.json({"error": str(err)}, status_code=err.status)
+        return self.json(document)
+
+    async def delete(self, request: web.Request, snapshot_id: str) -> web.Response:
+        """Delete one snapshot file."""
+        if (denied := _admin_or_response(request)) is not None:
+            return denied
+        hass: HomeAssistant = request.app["hass"]
+        try:
+            await async_delete_snapshot(hass, snapshot_id)
+        except BindError as err:
+            return self.json({"error": str(err)}, status_code=err.status)
+        return self.json({"id": snapshot_id, "deleted": True})
+
+
+class SnapshotRestoreView(HomeAssistantView):
+    """POST /api/homechameleon/snapshots/<id>/restore."""
+
+    url = "/api/homechameleon/snapshots/{snapshot_id}/restore"
+    name = "api:homechameleon:snapshot-restore"
+    requires_auth = True
+
+    async def post(self, request: web.Request, snapshot_id: str) -> web.Response:
+        """Restore a dashboard from a snapshot."""
+        if (denied := _admin_or_response(request)) is not None:
+            return denied
+        hass: HomeAssistant = request.app["hass"]
+        try:
+            result = await async_restore_snapshot(hass, snapshot_id)
+        except BindError as err:
+            return self.json({"error": str(err)}, status_code=err.status)
+        return self.json(result)
+
+
+class UndoView(HomeAssistantView):
+    """GET and POST /api/homechameleon/undo."""
+
+    url = "/api/homechameleon/undo"
+    name = "api:homechameleon:undo"
+    requires_auth = True
+
+    async def get(self, request: web.Request) -> web.Response:
+        """Say whether the last theme assignment can be restored."""
+        if (denied := _admin_or_response(request)) is not None:
+            return denied
+        hass: HomeAssistant = request.app["hass"]
+        return self.json(await async_undo_status(hass))
+
+    async def post(self, request: web.Request) -> web.Response:
+        """Restore the recorded global, per-user, and per-view themes."""
+        if (denied := _admin_or_response(request)) is not None:
+            return denied
+        hass: HomeAssistant = request.app["hass"]
+        try:
+            result = await async_undo(hass)
+        except BindError as err:
+            return self.json({"error": str(err)}, status_code=err.status)
+        return self.json(result)
