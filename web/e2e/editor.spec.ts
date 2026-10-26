@@ -71,3 +71,103 @@ test("palette, style, and a slider update the sample preview", async ({ page }) 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("heading", { name: "Home" })).toBeVisible();
 });
+
+test("the panel previews a room in light and dark before anything is applied", async ({ page }) => {
+  const room = {
+    area_id: "living_room",
+    name: "Living room",
+    view: { title: "Living room", path: "living-room", type: "sections", sections: [] },
+    yaml: 'title: "Living room"\npath: "living-room"\ntype: "sections"\n',
+    card_set: "core",
+    enhancements: [],
+    warnings: [],
+    wrote: false,
+    preview: {
+      header: {
+        title: "Living room",
+        temperature: { entity_id: "sensor.temp", name: "Temperature", state: "21.5", unit: "°C", card: "tile" },
+        humidity: { entity_id: "sensor.humidity", name: "Humidity", state: "44", unit: "%", card: "tile" },
+        lights_toggle: true,
+      },
+      sections: [
+        {
+          id: "lights",
+          title: "Lights",
+          cards: [
+            {
+              entity_id: "light.ceiling",
+              name: "Ceiling",
+              domain: "light",
+              state: "on",
+              unit: null,
+              interaction: "direct",
+              card: "tile",
+            },
+          ],
+        },
+        {
+          id: "security",
+          title: "Security",
+          cards: [
+            {
+              entity_id: "lock.front_door",
+              name: "Front door",
+              domain: "lock",
+              state: "locked",
+              unit: null,
+              interaction: "confirm",
+              card: "tile",
+              detail: "Asks before changing the lock.",
+            },
+          ],
+        },
+        {
+          id: "cameras",
+          title: "Cameras",
+          cards: [
+            {
+              entity_id: "camera.front",
+              name: "Front camera",
+              domain: "camera",
+              state: "idle",
+              unit: null,
+              interaction: "view",
+              card: "picture-entity",
+              detail: "View only.",
+            },
+          ],
+        },
+      ],
+    },
+  };
+  let posted = "";
+  await page.route("**/api/homechameleon/areas", (route) =>
+    route.fulfill({ json: { areas: [{ id: "living_room", name: "Living room", entities: 3 }] } }),
+  );
+  await page.route("**/api/homechameleon/room", (route) => {
+    posted = route.request().postData() ?? "";
+    return route.fulfill({ json: room });
+  });
+
+  await page.goto("/");
+  await expect(page.getByRole("tab", { name: "Room", exact: true })).toHaveCount(0);
+
+  await page.goto(`/?panel=1&palette=${encodeURIComponent(JSON.stringify(palette))}`);
+  await page.locator("hc-app[data-ready]").waitFor();
+  await page.getByRole("tab", { name: "Room", exact: true }).click();
+  await page.getByLabel("Area").selectOption("Living room");
+  await expect(page.getByRole("heading", { name: "Living room" }).first()).toBeVisible();
+  await expect(page.locator("hc-room-preview .side-label").nth(0)).toHaveText("Dark");
+  await expect(page.locator("hc-room-preview .side-label").nth(1)).toHaveText("Light");
+  await expect(page.getByText("Confirm").first()).toBeVisible();
+  await expect(page.getByText("View only").first()).toBeVisible();
+  await expect(page.getByText("does not write the view").first()).toBeVisible();
+  await expect(page.getByText("Core cards.")).toBeVisible();
+  expect(posted).toContain("living_room");
+  const sheets = page.locator("[data-room-sheet]");
+  await expect(sheets).toHaveCount(2);
+  const darkBg = await sheets.nth(0).evaluate((element) => getComputedStyle(element).backgroundColor);
+  const lightBg = await sheets.nth(1).evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(darkBg).not.toBe(lightBg);
+  await expect(page.getByRole("heading", { name: "Home" })).toHaveCount(0);
+});

@@ -5,6 +5,7 @@ import { repeat } from "lit/directives/repeat.js";
 
 import appCss from "./app.css?inline";
 import "./preview";
+import "./room-preview";
 import { CoreBridge } from "./bridge";
 import { decodeImage, encodeWallpaper, MAX_BYTES, MAX_IMAGES } from "./images";
 import {
@@ -41,6 +42,14 @@ import {
 } from "./model";
 import { type GenResult, type RoleColors, parseResult, rampColors } from "./result";
 import { buildZip, cardModSnippet } from "./zip";
+import {
+  ROOM_NOTE,
+  type AreaSummary,
+  type RoomPayload,
+  cardSetLabel,
+  fetchAreas,
+  fetchRoom,
+} from "./room";
 
 const BLUEPRINTS_KEY = "homechameleon.blueprints";
 
@@ -117,6 +126,11 @@ export class HcApp extends LitElement {
   @state() private applyTarget = "";
   @state() private viewChoices: { key: string; label: string }[] = [];
   @state() private undoReady = false;
+  @state() private areas: AreaSummary[] = [];
+  @state() private areaId = "";
+  @state() private room: RoomPayload | null = null;
+  @state() private roomError = "";
+  @state() private roomLoading = false;
 
   private readonly panelMode = new URLSearchParams(window.location.search).get("panel") === "1";
 
@@ -188,10 +202,10 @@ export class HcApp extends LitElement {
           </div>
           <input class="name" aria-label="Theme name" .value=${this.snap.name} @change=${this.onName} />
           <div class="tabs" role="tablist">
-            ${(["editor", "wallpaper", "blueprints", "yaml"] as const).map(
+            ${this.tabs().map(
               (tab) => html`
-                <button role="tab" aria-selected=${this.tab === tab} @click=${() => (this.tab = tab)}>
-                  ${tab === "editor" ? "Editor" : tab === "wallpaper" ? "Wallpaper" : tab === "blueprints" ? "Blueprints" : "YAML"}
+                <button role="tab" aria-selected=${this.tab === tab} @click=${() => this.openTab(tab)}>
+                  ${tab === "editor" ? "Editor" : tab === "wallpaper" ? "Wallpaper" : tab === "blueprints" ? "Blueprints" : tab === "room" ? "Room" : "YAML"}
                 </button>
               `,
             )}
@@ -235,13 +249,14 @@ export class HcApp extends LitElement {
             ${this.tab === "editor" ? this.editorPanel(images) : null}
             ${this.tab === "wallpaper" ? this.wallpaperPanel(images) : null}
             ${this.tab === "blueprints" ? this.blueprintPanel() : null}
+            ${this.tab === "room" ? this.roomPanel() : null}
             ${this.tab === "yaml" ? html`<pre class="yaml">${this.lockedYaml() || "The theme file appears after a photo or a palette."}</pre>` : null}
             ${this.error ? html`<p class="error">${this.error}</p>` : null}
             ${this.notice ? html`<p class="warn">${this.notice}</p>` : null}
           </aside>
           <section class="stage-wrap">
             <div class="preview-bar">
-              <span>Live preview</span>
+              <span>${this.tab === "room" ? "Room preview" : "Live preview"}</span>
               <span class="spacer"></span>
               <div class="devices" role="group" aria-label="Preview device">
                 ${(["desktop", "tablet", "phone"] as const).map(
@@ -266,13 +281,31 @@ export class HcApp extends LitElement {
                   `
                 : null}
             </div>
-            <hc-preview
-              .cssText=${this.previewCss}
-              .wallpaper=${images.find((image) => image.useAsBackground)?.previewUrl ?? images[0]?.previewUrl ?? null}
-              .device=${this.device}
-              .styleId=${this.snap.style}
-              .backgroundOn=${this.snap.backgroundEnabled}
-            ></hc-preview>
+            ${this.tab === "room"
+              ? html`
+                  <div class="room-compare ${this.roomSides().length === 1 ? "single" : ""}">
+                    ${this.roomSides().map(
+                      (side) => html`
+                        <hc-room-preview
+                          .cssText=${this.sideCss(side)}
+                          .device=${this.device}
+                          .side=${side}
+                          .preview=${this.room?.preview ?? null}
+                        ></hc-room-preview>
+                      `,
+                    )}
+                  </div>
+                  <p class="room-footnote">${ROOM_NOTE}</p>
+                `
+              : html`
+                  <hc-preview
+                    .cssText=${this.previewCss}
+                    .wallpaper=${images.find((image) => image.useAsBackground)?.previewUrl ?? images[0]?.previewUrl ?? null}
+                    .device=${this.device}
+                    .styleId=${this.snap.style}
+                    .backgroundOn=${this.snap.backgroundEnabled}
+                  ></hc-preview>
+                `}
           </section>
         </div>
         <footer>
@@ -428,6 +461,83 @@ export class HcApp extends LitElement {
         )}
       </section>
     `;
+  }
+
+  private roomPanel() {
+    return html`
+      <section>
+        <h2>Room</h2>
+        <p class="note">${ROOM_NOTE}</p>
+        <label class="area-pick">
+          Area
+          <select aria-label="Area" @change=${this.onArea}>
+            <option value="" ?selected=${this.areaId === ""}>Choose an area</option>
+            ${this.areas.map(
+              (area) => html`<option value=${area.id} ?selected=${this.areaId === area.id}>${area.name}</option>`,
+            )}
+          </select>
+        </label>
+        ${this.roomLoading ? html`<p class="note">Reading the area…</p>` : null}
+        ${this.roomError ? html`<p class="error">${this.roomError}</p>` : null}
+        ${this.roomSides().length < 2
+          ? html`<p class="note">Choose Auto to compare light and dark on this room.</p>`
+          : null}
+        ${this.room ? html`<p class="note">${cardSetLabel(this.room)}</p>` : null}
+        ${this.room?.warnings.length ? html`<p class="warn">${this.room.warnings[0]}</p>` : null}
+        ${this.room ? html`<pre class="yaml">${this.room.yaml}</pre>` : null}
+      </section>
+    `;
+  }
+
+  private tabs(): TabId[] {
+    const tabs: TabId[] = ["editor", "wallpaper", "blueprints"];
+    if (this.panelMode) tabs.push("room");
+    tabs.push("yaml");
+    return tabs;
+  }
+
+  private openTab(tab: TabId): void {
+    this.tab = tab;
+    if (tab === "room" && this.areas.length === 0 && !this.roomLoading) void this.loadAreas();
+  }
+
+  private roomSides(): PreviewSide[] {
+    const sides = (["dark", "light"] as const).filter((side) => Boolean(this.cssParts[side]));
+    return sides.length ? [...sides] : [this.snap.previewSide];
+  }
+
+  private sideCss(side: PreviewSide): string {
+    const raw = this.cssParts[side] ?? "";
+    const body = raw ? cssForSide(raw, side) : this.previewCss;
+    return applyLocks(body, this.snap.locks);
+  }
+
+  private async loadAreas(): Promise<void> {
+    this.roomLoading = true;
+    this.roomError = "";
+    try {
+      this.areas = await fetchAreas();
+    } catch (error) {
+      this.roomError = error instanceof Error ? error.message : "Areas could not be read";
+    } finally {
+      this.roomLoading = false;
+    }
+  }
+
+  private async onArea(event: Event): Promise<void> {
+    const areaId = (event.target as HTMLSelectElement).value;
+    this.areaId = areaId;
+    this.room = null;
+    if (!areaId) return;
+    this.roomLoading = true;
+    this.roomError = "";
+    try {
+      this.room = await fetchRoom(areaId);
+    } catch (error) {
+      this.roomError = error instanceof Error ? error.message : "The room view could not be built";
+    } finally {
+      this.roomLoading = false;
+    }
   }
 
   private swatch(role: RoleKey) {

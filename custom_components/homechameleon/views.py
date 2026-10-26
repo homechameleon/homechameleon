@@ -1,4 +1,4 @@
-"""HTTP views for generate, preview, styles, apply, and delete."""
+"""HTTP views for generate, preview, styles, apply, delete, and room views."""
 
 from __future__ import annotations
 
@@ -46,6 +46,7 @@ from .files import (
     delete_theme_files,
     theme_yaml_path,
 )
+from .rooms import RoomError, async_list_areas, async_room_response
 
 
 def async_register_views(hass: HomeAssistant) -> None:
@@ -61,6 +62,8 @@ def async_register_views(hass: HomeAssistant) -> None:
         SnapshotItemView,
         SnapshotRestoreView,
         UndoView,
+        AreasView,
+        RoomView,
     ):
         hass.http.register_view(view)
 
@@ -472,6 +475,46 @@ class ApplyView(HomeAssistantView):
         }
         payload.update(bound)
         return self.json(payload)
+
+
+class AreasView(HomeAssistantView):
+    """GET /api/homechameleon/areas."""
+
+    url = "/api/homechameleon/areas"
+    name = "api:homechameleon:areas"
+    requires_auth = True
+
+    async def get(self, request: web.Request) -> web.Response:
+        """List areas for the room preview."""
+        if (denied := _admin_or_response(request)) is not None:
+            return denied
+        hass: HomeAssistant = request.app["hass"]
+        return self.json(await async_list_areas(hass))
+
+
+class RoomView(HomeAssistantView):
+    """POST /api/homechameleon/room. Returns a view and writes nothing."""
+
+    url = "/api/homechameleon/room"
+    name = "api:homechameleon:room"
+    requires_auth = True
+
+    async def post(self, request: web.Request) -> web.Response:
+        """Build a Lovelace view for one area."""
+        if (denied := _admin_or_response(request)) is not None:
+            return denied
+        try:
+            body = await request.json()
+        except json.JSONDecodeError:
+            return self.json({"error": "request JSON could not be read"}, status_code=400)
+        if not isinstance(body, dict):
+            return self.json({"error": "request JSON must be an object"}, status_code=400)
+        hass: HomeAssistant = request.app["hass"]
+        try:
+            result = await async_room_response(hass, body)
+        except RoomError as err:
+            return self.json({"error": str(err)}, status_code=err.status)
+        return self.json(result)
 
 
 class DeleteView(HomeAssistantView):
