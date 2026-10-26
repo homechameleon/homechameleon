@@ -1,6 +1,7 @@
-//! Four launch styles. Each one writes the same variable names the preview CSS uses.
+//! Launch styles. Each one writes the same variable names the preview CSS uses.
 
 mod bubbles;
+mod flat;
 mod material;
 mod sheer;
 mod starship;
@@ -204,7 +205,9 @@ fn paint_shape(
     let radius = format!("{}px", tweaks.roundness.round() as i32);
     let control = match style {
         StyleId::Bubbles | StyleId::Starship => "999px".into(),
-        StyleId::Material => format!("{}px", (tweaks.roundness * 0.5).round() as i32),
+        StyleId::Material | StyleId::Flat => {
+            format!("{}px", (tweaks.roundness * 0.5).round() as i32)
+        }
         StyleId::Sheer => format!("{}px", (tweaks.roundness * 0.6).round() as i32),
     };
     set(vars, "ha-card-border-radius", radius.clone());
@@ -238,6 +241,13 @@ fn paint_shape(
             material::shadow(tweaks.glow, mode.is_dark()),
             roles.outline.hex(),
             "0px".into(),
+            None,
+            None,
+        ),
+        StyleId::Flat => (
+            flat::shadow(),
+            roles.outline.hex(),
+            "1px".into(),
             None,
             None,
         ),
@@ -396,6 +406,7 @@ fn card_mod_css(style: StyleId) -> Option<&'static str> {
         StyleId::Sheer => sheer::card_mod_css(),
         StyleId::Bubbles => bubbles::card_mod_css(),
         StyleId::Material => material::card_mod_css(),
+        StyleId::Flat => flat::card_mod_css(),
         StyleId::Starship => starship::card_mod_css(),
     })
 }
