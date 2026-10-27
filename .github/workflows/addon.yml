@@ -61,11 +61,6 @@ jobs:
           npx vite build --base ./ --outDir ../addon/www-check
       - name: Committed editor matches the build
         run: diff -r addon/www addon/www-check
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: www-check
-          path: addon/www-check
 
   image:
     runs-on: ubuntu-latest
