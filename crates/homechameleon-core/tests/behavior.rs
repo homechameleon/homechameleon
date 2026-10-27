@@ -50,10 +50,20 @@ fn unknown_style_json() {
 }
 
 #[test]
-fn styles_are_the_four_launch_styles() {
+fn styles_are_the_launch_styles() {
     let ids: Vec<_> = styles().into_iter().map(|style| style.id).collect();
-    assert_eq!(ids, ["sheer", "bubbles", "material", "starship"]);
+    assert_eq!(ids, ["sheer", "bubbles", "material", "flat", "starship"]);
     assert_eq!(slugify("Tokyo Night"), "tokyo-night");
+}
+
+#[test]
+fn flat_is_solid_with_no_shadow_or_blur() {
+    let result = generate(&desk(StyleId::Flat, Mode::Both)).unwrap();
+    assert!(result.contrast.pass, "{:?}", result.contrast.checks);
+    assert!(result.yaml.contains("ha-card-box-shadow: \"none\""));
+    assert!(!result.yaml.contains("backdrop-filter"));
+    assert!(result.yaml.contains("ha-card-border-radius: \"8px\""));
+    assert!(!result.yaml.contains("card-background-color: \"rgba"));
 }
 
 #[test]
@@ -117,6 +127,7 @@ fn every_style_passes_contrast_in_both_modes() {
         StyleId::Sheer,
         StyleId::Bubbles,
         StyleId::Material,
+        StyleId::Flat,
         StyleId::Starship,
     ] {
         for target in [ContrastTarget::Aa, ContrastTarget::Aaa] {

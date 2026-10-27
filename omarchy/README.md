@@ -84,7 +84,7 @@ never executed.
 | `URL` | | Home Assistant base URL, e.g. `http://localhost:8123` |
 | `TOKEN` | | Long-lived access token (administrator) |
 | `NAME` | `Omarchy` | Theme name in Home Assistant. `@theme` uses the Omarchy theme's name instead (for example "Tokyo Night"), so each Omarchy theme gets its own Home Assistant theme |
-| `STYLE` | `sheer` | Style id, passed through as is. Launch styles: `sheer`, `bubbles`, `material`, `starship` |
+| `STYLE` | `sheer` | Style id, passed through as is. Launch styles: `sheer`, `bubbles`, `material`, `flat`, `starship` |
 | `BACKGROUND` | `0` | `1` = also send the desktop background (see Privacy) |
 | `BG_BLUR`, `BG_DIM` | `0`, `0.0` | Background processing hints for the integration |
 | `MAX_EDGE` | `2560` | Longest edge of the WebP sent (64-2560) |

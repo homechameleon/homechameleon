@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# v0.1 QA matrix: Omarchy themes plus 20 synthetic photos, four styles, light and dark.
+# v0.1 QA matrix: Omarchy themes plus 20 synthetic photos, five styles, light and dark.
 # Native and wasm stdout must match. PyYAML must see one top-level key, the display name.
 set -euo pipefail
 

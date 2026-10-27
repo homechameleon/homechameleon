@@ -78,7 +78,13 @@ async def test_styles_require_auth_and_admin(hass, setup_hc, hass_client, hass_c
     response = await admin.get("/api/homechameleon/styles")
     assert response.status == 200
     payload = await response.json()
-    assert [item["id"] for item in payload["styles"]] == ["sheer", "bubbles", "material", "starship"]
+    assert [item["id"] for item in payload["styles"]] == [
+        "sheer",
+        "bubbles",
+        "material",
+        "flat",
+        "starship",
+    ]
 
     anonymous = await hass_client_no_auth()
     assert (await anonymous.get("/api/homechameleon/styles")).status == 401

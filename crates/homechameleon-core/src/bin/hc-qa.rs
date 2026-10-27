@@ -9,7 +9,7 @@ use homechameleon_core::{
     PaletteInput, StyleId,
 };
 
-const STYLES: [&str; 4] = ["sheer", "bubbles", "material", "starship"];
+const STYLES: [&str; 5] = ["sheer", "bubbles", "material", "flat", "starship"];
 const MODES: [(&str, Mode); 2] = [("light", Mode::Light), ("dark", Mode::Dark)];
 const PHOTO_EDGE: u32 = 64;
 

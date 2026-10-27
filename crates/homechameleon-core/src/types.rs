@@ -11,6 +11,7 @@ pub enum StyleId {
     Sheer,
     Bubbles,
     Material,
+    Flat,
     Starship,
 }
 
@@ -20,6 +21,7 @@ impl StyleId {
             "sheer" => Ok(Self::Sheer),
             "bubbles" => Ok(Self::Bubbles),
             "material" => Ok(Self::Material),
+            "flat" => Ok(Self::Flat),
             "starship" => Ok(Self::Starship),
             other => Err(GenerateError::UnknownStyle {
                 style: other.to_string(),
@@ -32,6 +34,7 @@ impl StyleId {
             Self::Sheer => "sheer",
             Self::Bubbles => "bubbles",
             Self::Material => "material",
+            Self::Flat => "flat",
             Self::Starship => "starship",
         }
     }
@@ -41,6 +44,7 @@ impl StyleId {
             Self::Sheer => "Sheer",
             Self::Bubbles => "Bubbles",
             Self::Material => "Material",
+            Self::Flat => "Flat",
             Self::Starship => "Starship Console",
         }
     }
@@ -50,6 +54,7 @@ impl StyleId {
             Self::Sheer => "Translucent cards, a soft blur, and a bright rim.",
             Self::Bubbles => "Large corners, soft color, and pill controls.",
             Self::Material => "Tonal surfaces from a Material Design color scheme.",
+            Self::Flat => "Solid surfaces with no shadow and no blur.",
             Self::Starship => "Dark panels, pill controls, and a colored cap on each card.",
         }
     }
@@ -75,6 +80,14 @@ impl StyleId {
             },
             Self::Material => Tweaks {
                 roundness: 16.0,
+                blur: 0.0,
+                transparency: 0.0,
+                glow: 0.0,
+                saturation: 0.0,
+                temperature: 0.0,
+            },
+            Self::Flat => Tweaks {
+                roundness: 8.0,
                 blur: 0.0,
                 transparency: 0.0,
                 glow: 0.0,
@@ -406,6 +419,7 @@ pub fn styles() -> Vec<StyleInfo> {
         StyleId::Sheer,
         StyleId::Bubbles,
         StyleId::Material,
+        StyleId::Flat,
         StyleId::Starship,
     ]
     .into_iter()
