@@ -265,7 +265,7 @@ fn contrast_report(
     let text_min = request.options.contrast.text_ratio();
     let ui_min = request.options.contrast.ui_ratio();
     let mut checks = Vec::new();
-    for (mode, roles, _, alpha) in built {
+    for (mode, roles, vars, alpha) in built {
         let push = |checks: &mut Vec<ContrastCheck>,
                     pair: &str,
                     a: crate::color::Rgb,
@@ -336,11 +336,37 @@ fn contrast_report(
             roles.surface,
             ui_min,
         );
+        push(
+            &mut checks,
+            "text/sidebar",
+            roles.text,
+            roles.sidebar,
+            text_min,
+        );
         if *alpha < 0.999 {
             let backdrop_color = backdrop_color(request, roles, backdrop, backdrop_size);
             let card = composite(roles.surface, *alpha, backdrop_color);
             push(&mut checks, "text/card", roles.text, card, text_min);
             push(&mut checks, "muted/card", roles.text_muted, card, text_min);
+        }
+        if let Some(ThemeValue::Scalar(ink_hex)) = vars.get("console-ink") {
+            if let Some(ink) = crate::color::Rgb::parse(ink_hex) {
+                for key in [
+                    "console-orange",
+                    "console-peach",
+                    "console-lavender",
+                    "console-blue",
+                    "console-red",
+                ] {
+                    let Some(ThemeValue::Scalar(hex)) = vars.get(key) else {
+                        continue;
+                    };
+                    let Some(color) = crate::color::Rgb::parse(hex) else {
+                        continue;
+                    };
+                    push(&mut checks, &format!("ink/{key}"), ink, color, text_min);
+                }
+            }
         }
     }
     let pass = checks.iter().all(|check| check.pass);

@@ -114,7 +114,7 @@ pub fn assign_material(
     temperature: f64,
 ) -> (Roles, Vec<String>) {
     // Material uses the same tonal roles as the other styles. The style
-    // itself is the elevation, the radius, and the lack of blur.
+    // itself is the elevation, the 12–28px shape scale, and the state layer.
     assign(seeds, mode, target, saturation, temperature)
 }
 
@@ -228,7 +228,7 @@ fn enforce(roles: &mut Roles, mode: ColorMode, target: ContrastTarget, warnings:
     let prefer_light = mode.is_dark();
     retone(
         &mut roles.text,
-        &[roles.surface, roles.bg],
+        &[roles.surface, roles.bg, roles.sidebar],
         text_min,
         prefer_light,
         "text",

@@ -51,11 +51,11 @@ impl StyleId {
 
     pub fn summary(self) -> &'static str {
         match self {
-            Self::Sheer => "Translucent cards, a soft blur, and a bright rim.",
-            Self::Bubbles => "Large corners, soft color, and pill controls.",
-            Self::Material => "Tonal surfaces from a Material Design color scheme.",
-            Self::Flat => "Solid surfaces with no shadow and no blur.",
-            Self::Starship => "Dark panels, pill controls, and a colored cap on each card.",
+            Self::Sheer => "Frosted panels, a saturated blur, and a bright rim.",
+            Self::Bubbles => "Blob cards, puffy shadows, and bouncy pill controls.",
+            Self::Material => "Tonal containers, elevation, and a 12 to 28 pixel shape scale.",
+            Self::Flat => "No shadows, bold color blocks, and strong type.",
+            Self::Starship => "Sweep corners, thick color bars, and condensed labels.",
         }
     }
 
@@ -63,18 +63,18 @@ impl StyleId {
     pub fn default_tweaks(self) -> Tweaks {
         match self {
             Self::Sheer => Tweaks {
-                roundness: 26.0,
+                roundness: 28.0,
                 blur: 28.0,
-                transparency: 78.0,
-                glow: 38.0,
+                transparency: 70.0,
+                glow: 46.0,
                 saturation: 0.0,
                 temperature: 0.0,
             },
             Self::Bubbles => Tweaks {
-                roundness: 30.0,
-                blur: 6.0,
-                transparency: 22.0,
-                glow: 18.0,
+                roundness: 36.0,
+                blur: 0.0,
+                transparency: 0.0,
+                glow: 34.0,
                 saturation: 0.0,
                 temperature: 0.0,
             },
@@ -82,7 +82,7 @@ impl StyleId {
                 roundness: 16.0,
                 blur: 0.0,
                 transparency: 0.0,
-                glow: 0.0,
+                glow: 20.0,
                 saturation: 0.0,
                 temperature: 0.0,
             },
@@ -95,10 +95,10 @@ impl StyleId {
                 temperature: 0.0,
             },
             Self::Starship => Tweaks {
-                roundness: 4.0,
+                roundness: 26.0,
                 blur: 0.0,
                 transparency: 0.0,
-                glow: 12.0,
+                glow: 40.0,
                 saturation: 0.0,
                 temperature: 0.0,
             },
@@ -269,7 +269,7 @@ impl Default for ThemeOptions {
 pub struct Tweaks {
     /// Card corner radius, 0–40 px.
     pub roundness: f64,
-    /// Backdrop blur, 0–40 px. Material and Starship Console ignore this.
+    /// Backdrop blur, 0–40 px. Only Sheer uses this.
     pub blur: f64,
     /// How see-through a card is, 0–100. 0 is opaque.
     pub transparency: f64,

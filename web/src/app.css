@@ -297,3 +297,11 @@ footer {
   header { flex-wrap: wrap; }
   .room-compare { grid-template-columns: 1fr; }
 }
+
+:host([board]) header,
+:host([board]) aside,
+:host([board]) footer,
+:host([board]) .preview-bar { display: none; }
+:host([board]) .body { display: block; height: 100vh; }
+:host([board]) .stage-wrap { height: 100vh; background: transparent; }
+:host([board]) hc-preview { display: block; height: 100%; }

@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, property } from "lit/decorators.js";
 import { unsafeCSS } from "lit";
 
 import previewCss from "./preview.css?inline";
@@ -7,6 +7,17 @@ import type { DeviceId, StyleId } from "./names";
 
 const fontHref = new URL("fonts/Antonio-Bold.woff2", document.baseURI).href;
 const FONT_STYLE_ID = "homechameleon-antonio";
+
+function bars(label: string) {
+  return html`
+    <div class="lcars" aria-hidden="true">
+      <i class="bar a"></i>
+      <i class="bar b"></i>
+      <i class="bar c"></i>
+      <i class="bar d">${label}</i>
+    </div>
+  `;
+}
 
 @customElement("hc-preview")
 export class HcPreview extends LitElement {
@@ -26,7 +37,7 @@ export class HcPreview extends LitElement {
   @property() device: DeviceId = "desktop";
   @property() styleId: StyleId = "sheer";
   @property({ type: Boolean }) backgroundOn = false;
-  @state() private pop = true;
+  @property({ type: Boolean, reflect: true }) fit = false;
 
   protected updated(): void {
     const stage = this.renderRoot.querySelector(".stage");
@@ -56,8 +67,9 @@ export class HcPreview extends LitElement {
                   <div class="main">
                     <div class="top">
                       <h2 class="view-title">Home</h2>
+                      <span class="code">04</span>
                       <div class="tabs" role="tablist" aria-label="Sample views">
-                        ${["Overview", "Living room", "Kitchen", "Energy"].map(
+                        ${["Overview", "Lights", "Climate"].map(
                           (label, index) => html`
                             <button class="tab" role="tab" aria-current=${index === 0 ? "page" : "false"}>${label}</button>
                           `,
@@ -68,100 +80,56 @@ export class HcPreview extends LitElement {
                       <span class="chip">19.0 °C</span>
                       <span class="chip">2 lights on</span>
                       <span class="chip">Locked</span>
-                      <span class="chip">Home</span>
                       <span class="chip">380 W</span>
                     </div>
                     <div class="grid">
-                      <article class="card">
-                        <h3>Living room</h3>
-                        <p class="muted">4 devices</p>
-                        <div class="tiles">
-                          <div class="tile"><strong>Ceiling</strong><span class="muted">On · 70%</span></div>
-                          <div class="tile"><strong>Floor lamp</strong><span class="muted">Off</span></div>
-                          <div class="tile">
-                            <strong>Thermostat</strong>
-                            <span class="muted">Heat · 19 °C</span>
-                            <div class="feature">
-                              <button type="button" aria-label="Decrease setpoint">−</button>
-                              <span>19°</span>
-                              <button type="button" aria-label="Increase setpoint">+</button>
-                            </div>
+                      <article class="card entities">
+                        ${bars("01")}
+                        <h3>Entities</h3>
+                        <div class="entity"><span>Ceiling</span><span class="muted">On · 70%</span></div>
+                        <div class="entity"><span>Floor lamp</span><span class="muted">Off</span></div>
+                        <div class="entity"><span>Front door</span><span class="muted">Locked</span></div>
+                        <div class="entity"><span>Hall motion</span><span class="muted">Clear</span></div>
+                      </article>
+                      <article class="card light-card">
+                        ${bars("14")}
+                        <h3>Light</h3>
+                        <div class="light-row">
+                          <span class="blob" aria-hidden="true"></span>
+                          <div>
+                            <strong>Pendant</strong>
+                            <div class="muted">Warm white · 80%</div>
                           </div>
-                          <div class="tile"><strong>Front door</strong><span class="muted">Locked</span></div>
+                          <button class="switch" type="button" role="switch" aria-checked="true" aria-label="Pendant"><i></i></button>
                         </div>
                       </article>
-                      <article class="card">
-                        <h3>Lights</h3>
-                        <div class="ring-wrap">
-                          <div class="ring"><span>80%</span></div>
-                          <div>Pendant</div>
-                          <span class="muted">Warm white</span>
+                      <article class="card thermo">
+                        ${bars("19")}
+                        <h3>Thermostat</h3>
+                        <div class="setpoint">
+                          <button type="button" aria-label="Decrease setpoint">−</button>
+                          <strong>19°</strong>
+                          <button type="button" aria-label="Increase setpoint">+</button>
                         </div>
+                        <p class="muted">Heat · living room</p>
                       </article>
-                      <article class="card">
-                        <h3>Kitchen</h3>
-                        <div class="rows">
-                          <div class="row"><span>Island</span><span>On</span></div>
-                          <div class="row"><span>Cabinets</span><span>On</span></div>
-                          <div class="row"><span>Kettle</span><span>Off</span></div>
-                          <div class="row"><span>Hood</span><span>Off</span></div>
-                        </div>
-                      </article>
-                      <article class="card">
-                        <h3>Weather</h3>
-                        <div>18°</div>
-                        <p class="muted">Partly cloudy · humidity 64% · wind 9 km/h</p>
-                        <div class="forecast">
-                          ${[
-                            ["Mon", "21°"],
-                            ["Tue", "19°"],
-                            ["Wed", "15°"],
-                            ["Thu", "17°"],
-                            ["Fri", "22°"],
-                          ].map(([day, temp]) => html`<div><div>${day}</div><strong>${temp}</strong></div>`)}
-                        </div>
-                      </article>
-                      <article class="card">
-                        <h3>Energy today</h3>
-                        <strong>5.8 kWh</strong>
-                        <svg class="energy" viewBox="0 0 200 72" aria-hidden="true">
-                          <path d="M0 50 C 20 48, 30 40, 50 42 S 80 58, 100 36 S 140 20, 160 28 200 22 200 18"></path>
-                        </svg>
-                      </article>
-                      <article class="card">
-                        <h3>Living room speaker</h3>
+                      <article class="card media-card">
+                        ${bars("08")}
+                        <h3>Media</h3>
                         <div class="media">
+                          <div class="art" aria-hidden="true"></div>
                           <div>
                             <strong>Night Window</strong>
                             <div class="muted">Field Notes</div>
                           </div>
-                          <div class="transport">
-                            <button type="button" aria-label="Previous">‹</button>
-                            <button type="button" aria-label="Pause">❚❚</button>
-                            <button type="button" aria-label="Next">›</button>
-                          </div>
+                        </div>
+                        <div class="transport">
+                          <button type="button" aria-label="Previous">‹</button>
+                          <button type="button" aria-label="Pause">❚❚</button>
+                          <button type="button" aria-label="Next">›</button>
                         </div>
                       </article>
                     </div>
-                    <div class="scenes" aria-label="Scenes">
-                      <span class="scene">Day</span>
-                      <span class="scene">Evening</span>
-                      <span class="scene">Night</span>
-                    </div>
-                    ${this.pop
-                      ? html`
-                          <article class="pop" aria-label="Bubble pop-up">
-                            <header>
-                              <h3>Bubble pop-up</h3>
-                              <button type="button" @click=${() => (this.pop = false)} aria-label="Close pop-up">×</button>
-                            </header>
-                            <p class="muted">Sample pop-up card</p>
-                            <div class="days">
-                              <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span>
-                            </div>
-                          </article>
-                        `
-                      : null}
                   </div>
                 </div>
               `
