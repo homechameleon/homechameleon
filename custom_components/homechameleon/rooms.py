@@ -365,12 +365,13 @@ def _attr_text(attributes: Any, key: str) -> str | None:
 
 
 def _packs_from_lovelace(hass: HomeAssistant) -> set[str]:
+    """Read resources already stored under the lovelace data key.
+
+    The key is the string "lovelace". Looking it up directly avoids importing
+    that component, which would make it a manifest dependency.
+    """
     found: set[str] = set()
-    try:
-        from homeassistant.components.lovelace.const import LOVELACE_DATA
-    except ImportError:
-        return found
-    data = hass.data.get(LOVELACE_DATA)
+    data = hass.data.get("lovelace")
     resources = getattr(data, "resources", None)
     if resources is None or not getattr(resources, "loaded", False):
         return found

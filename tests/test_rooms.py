@@ -427,6 +427,32 @@ async def test_room_routes_are_admin_only(hass, setup_hc, hass_client, hass_clie
     assert (await reader.post("/api/homechameleon/room", json={"area_id": "x"})).status == 403
 
 
+async def test_resource_list_on_the_lovelace_data_key_selects_mushroom(hass, setup_hc, hass_client):
+    """A loaded resource list is read from hass.data without importing that component."""
+    area = ar.async_get(hass).async_create("Study")
+    _add_entity(hass, "light", "study", "Study", area_id=area.id)
+    hass.states.async_set("light.study", "on", {})
+
+    class _Resources:
+        loaded = True
+
+        @staticmethod
+        def async_items():
+            return [{"url": "/local/community/lovelace-mushroom/mushroom.js"}]
+
+    class _Lovelace:
+        resources = _Resources()
+
+    hass.data["lovelace"] = _Lovelace()
+    client = await hass_client()
+    response = await client.post("/api/homechameleon/room", json={"area_id": area.id})
+    assert response.status == 200
+    payload = await response.json()
+    assert payload["enhancements"] == ["mushroom"]
+    source = Path(__file__).resolve().parents[1] / "custom_components/homechameleon/rooms.py"
+    assert "homeassistant.components.lovelace" not in source.read_text(encoding="utf-8")
+
+
 async def test_installed_cards_are_detected_for_the_view(hass, setup_hc, hass_client):
     """A detected Mushroom install changes non-security cards only."""
     area = ar.async_get(hass).async_create("Office")
