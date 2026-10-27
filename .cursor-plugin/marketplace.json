@@ -1,0 +1,16 @@
+{
+  "name": "homechameleon",
+  "owner": {
+    "name": "HomeChameleon"
+  },
+  "metadata": {
+    "description": "Cursor and Grok Bot plugins from the HomeChameleon project."
+  },
+  "plugins": [
+    {
+      "name": "holly-for-home-assistant",
+      "source": "holly-for-home-assistant",
+      "description": "Unofficial assistant for a Home Assistant instance. Connects the built-in MCP server, then helps with safe updates, repairs, cleanup, automations, dashboards, and themes. Not affiliated with Home Assistant or the Open Home Foundation."
+    }
+  ]
+}
