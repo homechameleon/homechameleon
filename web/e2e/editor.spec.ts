@@ -43,6 +43,44 @@ test("the zip export stays, and Apply appears only in the panel", async ({ page 
   await expect.poll(() => fontStatus, { timeout: 10_000 }).toContain(200);
 });
 
+test("the add-on page applies through the add-on", async ({ page }) => {
+  await page.goto(`/?addon=1&palette=${encodeURIComponent(JSON.stringify(palette))}`);
+  await page.locator("hc-app[data-ready]").waitFor();
+  const seen: { url: string; yaml: string; token?: string }[] = [];
+  await page.route("**/api/apply", async (route) => {
+    const body = route.request().postDataJSON() as { yaml?: string; token?: string };
+    seen.push({ url: route.request().url(), yaml: body.yaml ?? "", token: body.token });
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ theme: "HomeChameleon", warnings: [] }),
+    });
+  });
+  await page.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(page.getByText("Applied HomeChameleon")).toBeVisible();
+  expect(seen).toHaveLength(1);
+  expect(new URL(seen[0].url).pathname).toBe("/api/apply");
+  expect(seen[0].yaml).toContain("primary-color");
+  expect(seen[0].token).toBeUndefined();
+});
+
+test("the sidebar panel still applies through the integration", async ({ page }) => {
+  await page.goto(`/?panel=1&palette=${encodeURIComponent(JSON.stringify(palette))}`);
+  await page.locator("hc-app[data-ready]").waitFor();
+  let pathname = "";
+  await page.route("**/api/homechameleon/apply", async (route) => {
+    pathname = new URL(route.request().url()).pathname;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ theme: "HomeChameleon", warnings: [] }),
+    });
+  });
+  await page.getByRole("button", { name: "Apply", exact: true }).click();
+  await expect(page.getByText("Applied HomeChameleon")).toBeVisible();
+  expect(pathname).toBe("/api/homechameleon/apply");
+});
+
 test("palette, style, and a slider update the sample preview", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/?palette=${encodeURIComponent(JSON.stringify(palette))}`);

@@ -53,6 +53,17 @@ import {
 
 const BLUEPRINTS_KEY = "homechameleon.blueprints";
 
+type HostMode = "panel" | "addon" | "standalone";
+
+function hostMode(): HostMode {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("addon") === "1") return "addon";
+  const meta = document.querySelector('meta[name="homechameleon-host"]');
+  if (meta instanceof HTMLMetaElement && meta.content === "addon") return "addon";
+  if (params.get("panel") === "1") return "panel";
+  return "standalone";
+}
+
 function bytesToBase64(bytes: Uint8Array): string {
   let text = "";
   const chunk = 0x8000;
@@ -132,7 +143,10 @@ export class HcApp extends LitElement {
   @state() private roomError = "";
   @state() private roomLoading = false;
 
-  private readonly panelMode = new URLSearchParams(window.location.search).get("panel") === "1";
+  private readonly hostMode = hostMode();
+  private get panelMode(): boolean {
+    return this.hostMode === "panel";
+  }
 
   private readonly bridge = new CoreBridge();
   private readonly bank = new Map<string, BoardImage>();
@@ -215,16 +229,21 @@ export class HcApp extends LitElement {
           <button class="ghost" ?disabled=${this.futureCount === 0} @click=${this.redo}>Redo</button>
           <button class="ghost" @click=${this.saveBlueprint}>Save blueprint</button>
           <button class="primary" ?disabled=${!this.exportYaml} @click=${() => void this.exportZip()}>Export zip</button>
-          ${this.panelMode
-            ? html`
-                <select class="apply-target" aria-label="Apply to" @change=${this.onApplyTarget}>
-                  <option value="" ?selected=${this.applyTarget === ""}>Theme files only</option>
-                  ${this.viewChoices.map(
-                    (choice) => html`
-                      <option value=${choice.key} ?selected=${this.applyTarget === choice.key}>${choice.label}</option>
-                    `,
-                  )}
-                </select>
+          ${this.hostMode === "standalone"
+            ? null
+            : html`
+                ${this.panelMode
+                  ? html`
+                      <select class="apply-target" aria-label="Apply to" @change=${this.onApplyTarget}>
+                        <option value="" ?selected=${this.applyTarget === ""}>Theme files only</option>
+                        ${this.viewChoices.map(
+                          (choice) => html`
+                            <option value=${choice.key} ?selected=${this.applyTarget === choice.key}>${choice.label}</option>
+                          `,
+                        )}
+                      </select>
+                    `
+                  : null}
                 <label class="apply-default">
                   <input
                     type="checkbox"
@@ -235,14 +254,17 @@ export class HcApp extends LitElement {
                   />
                   Use as the default theme
                 </label>
-                <button class="ghost" ?disabled=${!this.undoReady || this.applying} @click=${() => void this.undoTheme()}>
-                  Undo theme
-                </button>
+                ${this.panelMode
+                  ? html`
+                      <button class="ghost" ?disabled=${!this.undoReady || this.applying} @click=${() => void this.undoTheme()}>
+                        Undo theme
+                      </button>
+                    `
+                  : null}
                 <button class="primary" ?disabled=${!this.exportYaml || this.applying} @click=${() => void this.applyTheme()}>
                   Apply
                 </button>
-              `
-            : null}
+              `}
         </header>
         <div class="body">
           <aside>
@@ -892,7 +914,7 @@ export class HcApp extends LitElement {
     this.applying = true;
     this.notice = "";
     try {
-      const response = await fetch("/api/homechameleon/apply", {
+      const response = await fetch(this.applyEndpoint(), {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
@@ -952,6 +974,11 @@ export class HcApp extends LitElement {
     } finally {
       this.applying = false;
     }
+  }
+
+  private applyEndpoint(): string {
+    if (this.hostMode === "addon") return new URL("api/apply", window.location.href).href;
+    return "/api/homechameleon/apply";
   }
 
   private async exportZip(): Promise<void> {

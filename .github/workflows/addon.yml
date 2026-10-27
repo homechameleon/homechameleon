@@ -1,0 +1,76 @@
+name: addon
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Home Assistant add-on linter
+        uses: frenck/action-app-linter@v2.21.1
+        with:
+          path: "./addon"
+      - name: Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: addon/Dockerfile
+
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy -p homechameleon-addon --all-targets -- -D warnings
+      - name: Test
+        run: cargo test -p homechameleon-addon
+
+  editor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install wasm-pack
+        run: |
+          curl -fsSL -o /tmp/wasm-pack.tgz -L https://github.com/rustwasm/wasm-pack/releases/download/v0.13.1/wasm-pack-v0.13.1-x86_64-unknown-linux-musl.tar.gz
+          tar -xzf /tmp/wasm-pack.tgz -C /tmp
+          sudo mv /tmp/wasm-pack-v0.13.1-x86_64-unknown-linux-musl/wasm-pack /usr/local/bin/wasm-pack
+      - name: Rebuild the ingress editor
+        working-directory: web
+        run: |
+          npm ci
+          npm run build:wasm
+          npx vite build --base ./ --outDir ../addon/www-check
+      - name: Committed editor matches the build
+        run: diff -r addon/www addon/www-check
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stage this commit's generator
+        run: |
+          rm -rf addon/server/.core-snapshot
+          mkdir -p addon/server/.core-snapshot
+          cp -a crates/homechameleon-core/. addon/server/.core-snapshot/
+          rm -rf addon/server/.core-snapshot/target
+      - name: Build the add-on image
+        run: docker build -t homechameleon-addon:test addon
