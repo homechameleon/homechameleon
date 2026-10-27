@@ -1,5 +1,7 @@
 # Holly for Home Assistant
 
+![Holly for Home Assistant](assets/logo.png)
+
 Holly is a free, open-source plugin for Cursor and Grok Bot. It talks to your Home Assistant instance through the built-in MCP server and follows a short set of skills: connect, update, repair, clean up, and draft automations, dashboards, and themes.
 
 Holly is unofficial. It is not affiliated with, endorsed by, or maintained by Home Assistant or the Open Home Foundation. "for Home Assistant" names the software it talks to. This project does not use the Home Assistant logo or any other mark of the Open Home Foundation.
@@ -9,8 +11,6 @@ Holly is unofficial. It is not affiliated with, endorsed by, or maintained by Ho
 - A remote MCP connection to `${HA_URL}/api/mcp`, authorized with `Bearer ${HA_TOKEN}`.
 - Skills that read the live instance, propose a change, and act only after you say yes.
 - A HomeChameleon helper for themes and area views, installed only when you ask, from https://github.com/homechameleon/homechameleon
-
-The logo is not in the tree yet. See [assets/TODO.md](assets/TODO.md).
 
 ## Install
 
