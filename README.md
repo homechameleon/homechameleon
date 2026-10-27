@@ -6,6 +6,8 @@ Turn your photos into complete Home Assistant themes, in the style you pick.
 
 HomeChameleon is not affiliated with or endorsed by the Open Home Foundation or Home Assistant, and is not affiliated with ha-chameleon. ha-chameleon colors RGB lights. HomeChameleon builds dashboard themes.
 
+An unofficial Cursor and Grok Bot plugin, Holly for Home Assistant, lives in [`holly-for-home-assistant/`](holly-for-home-assistant/).
+
 ## What works today
 
 The editor in [`web/`](web/) runs in the browser. Drop up to eight photos, or import an Omarchy `colors.toml`, a Base16 scheme, a hex list, or `homechameleon-palette/1` JSON (a `?palette=` link works too). Pick Sheer, Bubbles, Material, Flat, or Starship Console, then Dark, Light, or Auto. A sample dashboard follows the CSS variables from the generated theme. Undo, redo, and blueprints stay in this browser.

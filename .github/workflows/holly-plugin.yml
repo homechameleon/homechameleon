@@ -1,0 +1,24 @@
+# Validates the Holly plugin only. Path filters keep it off other HomeChameleon changes.
+name: holly-plugin
+
+on:
+  push:
+    paths:
+      - "holly-for-home-assistant/**"
+      - ".github/workflows/holly-plugin.yml"
+  pull_request:
+    paths:
+      - "holly-for-home-assistant/**"
+      - ".github/workflows/holly-plugin.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate plugin JSON and declared variables
+        run: python3 holly-for-home-assistant/scripts/validate_plugin.py
