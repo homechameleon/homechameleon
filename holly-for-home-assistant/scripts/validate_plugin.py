@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Validate Holly plugin JSON and require every ${VAR} to be declared.
 
-Scans this plugin directory only. Standard-library only, so CI needs no install.
+Also checks the repository marketplace manifest: each entry's source must be a
+folder under the repo root that contains .cursor-plugin/plugin.json, and that
+manifest's name must match the entry. Standard-library only, so CI needs no install.
 """
 
 from __future__ import annotations
@@ -101,6 +103,79 @@ def check_mcp(mcp: object, errors: list[str]) -> None:
         errors.append("MCP server must be remote, not a local command")
 
 
+def check_marketplace(declared: set[str], errors: list[str]) -> int:
+    """Return how many plugin entries were checked."""
+    repo = ROOT.parent
+    path = repo / ".cursor-plugin" / "marketplace.json"
+    if not path.is_file():
+        errors.append("missing .cursor-plugin/marketplace.json at the repository root")
+        return 0
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        errors.append(f".cursor-plugin/marketplace.json: invalid JSON ({exc})")
+        return 0
+    if not isinstance(document, dict):
+        errors.append(".cursor-plugin/marketplace.json: expected an object")
+        return 0
+    plugins = document.get("plugins")
+    if not isinstance(plugins, list):
+        errors.append("marketplace plugins must be a list")
+        return 0
+    repo_resolved = repo.resolve()
+    checked = 0
+    for index, entry in enumerate(plugins):
+        label = f"plugins[{index}]"
+        if not isinstance(entry, dict):
+            errors.append(f"{label} must be an object")
+            continue
+        name = entry.get("name")
+        source = entry.get("source")
+        if isinstance(name, str) and name.strip():
+            label = name.strip()
+        else:
+            errors.append(f"{label} needs a name")
+            continue
+        if isinstance(source, dict):
+            source_value = source.get("path")
+        else:
+            source_value = source
+        if (
+            not isinstance(source_value, str)
+            or not source_value.strip()
+            or source_value.startswith("/")
+            or "://" in source_value
+        ):
+            errors.append(f"{label}: source must be a relative folder")
+            continue
+        plugin_dir = (repo / source_value).resolve()
+        try:
+            plugin_dir.relative_to(repo_resolved)
+        except ValueError:
+            errors.append(f"{label}: source escapes the repository")
+            continue
+        manifest_path = plugin_dir / ".cursor-plugin" / "plugin.json"
+        if not manifest_path.is_file():
+            errors.append(f"{label}: {source_value} has no .cursor-plugin/plugin.json")
+            continue
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            errors.append(f"{label}: plugin.json is invalid JSON ({exc})")
+            continue
+        found = manifest.get("name") if isinstance(manifest, dict) else None
+        if found != label:
+            errors.append(f"{label}: plugin.json name is {found!r}")
+            continue
+        checked += 1
+    text = path.read_text(encoding="utf-8")
+    for match in PLACEHOLDER.finditer(text):
+        token = match.group(1).strip()
+        if IDENTIFIER.fullmatch(token) is None or token not in declared:
+            errors.append(f".cursor-plugin/marketplace.json: ${{{token}}} is not a declared variable")
+    return checked
+
+
 def scan_placeholders(declared: set[str], errors: list[str]) -> None:
     for path in sorted(ROOT.rglob("*")):
         if not path.is_file() or path.suffix.lower() not in TEXT_SUFFIXES:
@@ -142,9 +217,14 @@ def main() -> None:
         check_mcp(parsed[mcp_path], errors)
 
     scan_placeholders(declared, errors)
+    marketplace_entries = check_marketplace(declared, errors)
     if errors:
         fail(errors)
-    print(f"ok: {len(json_paths)} JSON files, variables {', '.join(sorted(declared))}")
+    print(
+        f"ok: {len(json_paths)} JSON files, "
+        f"variables {', '.join(sorted(declared))}, "
+        f"marketplace entries {marketplace_entries}"
+    )
 
 
 if __name__ == "__main__":
