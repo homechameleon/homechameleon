@@ -173,6 +173,18 @@ export class HcApp extends LitElement {
     super.connectedCallback();
     this.blueprints = readBlueprints();
     const params = new URLSearchParams(location.search);
+    if (params.get("board") === "1") this.setAttribute("board", "");
+    const requested = params.get("style");
+    const style = STYLE_IDS.find((id) => id === requested);
+    if (style) {
+      this.snap = {
+        ...this.snap,
+        style,
+        tweaks: { ...STYLE_DEFAULTS[style] },
+        mode: "dark",
+        previewSide: "dark",
+      };
+    }
     const palette = params.get("palette");
     if (palette) {
       const detected = detectPalette(decodePaletteParam(palette));
@@ -321,6 +333,7 @@ export class HcApp extends LitElement {
                 `
               : html`
                   <hc-preview
+                    ?fit=${this.hasAttribute("board")}
                     .cssText=${this.previewCss}
                     .wallpaper=${images.find((image) => image.useAsBackground)?.previewUrl ?? images[0]?.previewUrl ?? null}
                     .device=${this.device}

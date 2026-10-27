@@ -50,6 +50,77 @@ fn unknown_style_json() {
 }
 
 #[test]
+fn each_style_has_its_own_shape() {
+    let mut radii = Vec::new();
+    let mut shadows = Vec::new();
+    for style in [
+        StyleId::Sheer,
+        StyleId::Bubbles,
+        StyleId::Material,
+        StyleId::Flat,
+        StyleId::Starship,
+    ] {
+        let mut request = desk(style, Mode::Dark);
+        request.options.card_mod = true;
+        let result = generate(&request).unwrap();
+        assert!(
+            result.contrast.pass,
+            "{style:?} {:?}",
+            result
+                .contrast
+                .checks
+                .iter()
+                .filter(|check| !check.pass)
+                .collect::<Vec<_>>()
+        );
+        radii.push(capture(&result.yaml, "ha-card-border-radius"));
+        shadows.push(capture(&result.yaml, "ha-card-box-shadow"));
+        match style {
+            StyleId::Sheer => {
+                assert!(result.yaml.contains("saturate("));
+                assert!(result.yaml.contains("@supports"));
+                assert!(result.yaml.contains("backdrop-filter"));
+            }
+            StyleId::Bubbles => {
+                assert!(result.yaml.contains("scale(1.015)"));
+                assert!(result.yaml.contains("cubic-bezier"));
+                assert!(!result.yaml.contains("backdrop-filter"));
+            }
+            StyleId::Material => {
+                assert!(result.yaml.contains("ha-card-border-radius: \"16px\""));
+                assert!(result.yaml.contains("opacity:0.08"));
+                assert!(!result.yaml.contains("backdrop-filter"));
+            }
+            StyleId::Flat => {
+                assert!(result.yaml.contains("ha-card-box-shadow: \"none\""));
+                assert!(result.yaml.contains("letter-spacing:-0.03em"));
+                assert!(!result.yaml.contains("backdrop-filter"));
+            }
+            StyleId::Starship => {
+                assert!(result.yaml.contains("console-orange"));
+                assert!(result.yaml.contains("var(--primary-color)"));
+                assert!(result.yaml.contains("Antonio"));
+                assert!(result.yaml.contains("content:\"47\""));
+                assert!(!result.yaml.contains("backdrop-filter"));
+            }
+        }
+    }
+    for (index, radius) in radii.iter().enumerate() {
+        assert!(
+            radii.iter().skip(index + 1).all(|other| other != radius),
+            "radii {radii:?}"
+        );
+        assert!(
+            shadows
+                .iter()
+                .skip(index + 1)
+                .all(|other| other != &shadows[index]),
+            "shadows {shadows:?}"
+        );
+    }
+}
+
+#[test]
 fn styles_are_the_launch_styles() {
     let ids: Vec<_> = styles().into_iter().map(|style| style.id).collect();
     assert_eq!(ids, ["sheer", "bubbles", "material", "flat", "starship"]);
@@ -271,6 +342,17 @@ fn solid(width: u32, height: u32, px: [u8; 4]) -> Vec<u8> {
         rgba.extend_from_slice(&px);
     }
     rgba
+}
+
+fn capture(yaml: &str, key: &str) -> String {
+    yaml.lines()
+        .find_map(|line| {
+            let rest = line.trim().strip_prefix(key)?;
+            rest.strip_prefix(": \"")
+                .and_then(|value| value.strip_suffix('"'))
+                .map(str::to_string)
+        })
+        .unwrap_or_else(|| panic!("missing {key}"))
 }
 
 fn assert_yaml_keys_match_css(yaml: &str, css: &str) {

@@ -43,16 +43,19 @@ pub fn build_mode(input: &ModeInput<'_>, warnings: &mut Vec<String>) -> BuiltMod
     let file_name = input.file_name;
     let mut vars = BTreeMap::new();
     let alpha = card_alpha(input, warnings);
-    paint_colors(&mut vars, roles, alpha);
-    paint_shape(&mut vars, style, roles, mode, tweaks, alpha);
+    paint_colors(&mut vars, style, roles, mode, alpha);
+    paint_shape(&mut vars, style, mode, tweaks, alpha);
     paint_named(&mut vars, roles);
     paint_state(&mut vars, roles);
-    paint_type(&mut vars);
+    paint_type(&mut vars, style);
+    if style == StyleId::Starship {
+        paint_console(&mut vars, roles, tweaks);
+    }
     if options.bubble {
-        paint_bubble(&mut vars, roles, tweaks);
+        paint_bubble(&mut vars, style, roles, tweaks);
     }
     if options.mushroom {
-        paint_mushroom(&mut vars, roles, tweaks);
+        paint_mushroom(&mut vars, style, roles, tweaks);
     }
     if background.enabled {
         if let Some(name) = file_name {
@@ -137,16 +140,25 @@ fn backdrop_for(
     (roles.bg, note)
 }
 
-fn paint_colors(vars: &mut BTreeMap<String, ThemeValue>, roles: &Roles, alpha: f64) {
+fn paint_colors(
+    vars: &mut BTreeMap<String, ThemeValue>,
+    style: StyleId,
+    roles: &Roles,
+    mode: ColorMode,
+    alpha: f64,
+) {
+    let (bg, surface, surface2, sidebar) = console_surfaces(style, roles, mode);
+    let card_rgb = surface;
     let card = if alpha >= 0.999 {
-        roles.surface.hex()
+        card_rgb.hex()
     } else {
-        rgba(roles.surface, alpha)
+        rgba(card_rgb, alpha)
     };
+    let divider_alpha = if style == StyleId::Flat { 0.38 } else { 0.12 };
     set(vars, "primary-color", roles.primary.hex());
     set(vars, "accent-color", roles.accent.hex());
-    set(vars, "primary-background-color", roles.bg.hex());
-    set(vars, "secondary-background-color", roles.surface2.hex());
+    set(vars, "primary-background-color", bg.hex());
+    set(vars, "secondary-background-color", surface2.hex());
     set(vars, "card-background-color", card.clone());
     set(vars, "ha-card-background", card);
     set(vars, "primary-text-color", roles.text.hex());
@@ -157,11 +169,11 @@ fn paint_colors(vars: &mut BTreeMap<String, ThemeValue>, roles: &Roles, alpha: f
         "disabled-text-color",
         roles::named_color(roles, "grey").hex(),
     );
-    set(vars, "divider-color", rgba(roles.text, 0.12));
+    set(vars, "divider-color", rgba(roles.text, divider_alpha));
     set(vars, "outline-color", roles.outline.hex());
-    set(vars, "app-header-background-color", roles.sidebar.hex());
+    set(vars, "app-header-background-color", sidebar.hex());
     set(vars, "app-header-text-color", roles.text.hex());
-    set(vars, "sidebar-background-color", roles.sidebar.hex());
+    set(vars, "sidebar-background-color", sidebar.hex());
     set(vars, "sidebar-text-color", roles.text.hex());
     set(vars, "sidebar-selected-text-color", roles.primary.hex());
     set(vars, "sidebar-selected-icon-color", roles.primary.hex());
@@ -175,7 +187,7 @@ fn paint_colors(vars: &mut BTreeMap<String, ThemeValue>, roles: &Roles, alpha: f
     set(vars, "rgb-primary-text-color", roles.text.triplet());
     set(vars, "rgb-secondary-text-color", roles.text_muted.triplet());
     set(vars, "rgb-text-primary-color", roles.on_primary.triplet());
-    set(vars, "rgb-card-background-color", roles.surface.triplet());
+    set(vars, "rgb-card-background-color", card_rgb.triplet());
     set(vars, "rgb-success-color", roles.success.triplet());
     set(vars, "rgb-warning-color", roles.warn.triplet());
     set(vars, "rgb-error-color", roles.error.triplet());
@@ -197,64 +209,112 @@ fn paint_colors(vars: &mut BTreeMap<String, ThemeValue>, roles: &Roles, alpha: f
 fn paint_shape(
     vars: &mut BTreeMap<String, ThemeValue>,
     style: StyleId,
-    roles: &Roles,
     mode: ColorMode,
     tweaks: Tweaks,
     alpha: f64,
 ) {
-    let radius = format!("{}px", tweaks.roundness.round() as i32);
-    let control = match style {
-        StyleId::Bubbles | StyleId::Starship => "999px".into(),
-        StyleId::Material | StyleId::Flat => {
-            format!("{}px", (tweaks.roundness * 0.5).round() as i32)
-        }
-        StyleId::Sheer => format!("{}px", (tweaks.roundness * 0.6).round() as i32),
-    };
-    set(vars, "ha-card-border-radius", radius.clone());
-    set(vars, "ha-border-radius-sm", "4px");
-    set(vars, "ha-border-radius-md", control.clone());
-    set(vars, "ha-border-radius-lg", radius.clone());
-    set(vars, "ha-border-radius-xl", radius);
-    set(vars, "ha-border-radius-pill", "999px");
-    let (shadow, border, border_width, blur, dialog): (
+    let round = tweaks.roundness.round() as i32;
+    let (radius, sm, md, lg, xl, pill): (String, String, String, String, String, String) =
+        match style {
+            StyleId::Sheer => {
+                let radius = format!("{round}px");
+                let control = format!("{}", (tweaks.roundness * 0.65).round() as i32);
+                (
+                    radius.clone(),
+                    "8px".into(),
+                    format!("{control}px"),
+                    radius.clone(),
+                    radius,
+                    "999px".into(),
+                )
+            }
+            StyleId::Bubbles => {
+                let radius = format!("{round}px");
+                (
+                    radius.clone(),
+                    "18px".into(),
+                    "999px".into(),
+                    radius.clone(),
+                    radius,
+                    "999px".into(),
+                )
+            }
+            StyleId::Material => {
+                let card = material::card_radius(tweaks.roundness);
+                (
+                    format!("{card}px"),
+                    "8px".into(),
+                    "12px".into(),
+                    format!("{card}px"),
+                    "28px".into(),
+                    "999px".into(),
+                )
+            }
+            StyleId::Flat => {
+                let radius = format!("{round}px");
+                (
+                    radius.clone(),
+                    "0px".into(),
+                    "0px".into(),
+                    radius.clone(),
+                    radius,
+                    "0px".into(),
+                )
+            }
+            StyleId::Starship => (
+                format!("0px {round}px {round}px {round}px"),
+                "4px".into(),
+                "999px".into(),
+                format!("{round}px"),
+                format!("{round}px"),
+                "999px".into(),
+            ),
+        };
+    set(vars, "ha-card-border-radius", radius);
+    set(vars, "ha-border-radius-sm", sm);
+    set(vars, "ha-border-radius-md", md);
+    set(vars, "ha-border-radius-lg", lg);
+    set(vars, "ha-border-radius-xl", xl);
+    set(vars, "ha-border-radius-pill", pill);
+    let (shadow, border, border_width, filter, dialog): (
         String,
         String,
         String,
-        Option<f64>,
+        Option<String>,
         Option<String>,
     ) = match style {
         StyleId::Sheer => (
             sheer::shadow(tweaks.glow, mode.is_dark()),
             sheer::border(tweaks.glow),
             "1px".into(),
-            Some(tweaks.blur),
-            Some(format!("blur({}px)", tweaks.blur.round() as i32)),
+            (tweaks.blur > 0.0).then(|| sheer::backdrop(tweaks.blur)),
+            Some(sheer::backdrop(tweaks.blur.max(8.0))),
         ),
         StyleId::Bubbles => (
             bubbles::shadow(tweaks.glow, mode.is_dark()),
-            rgba(roles.outline, 0.28),
-            "1px".into(),
-            Some(tweaks.blur.min(12.0)),
+            "transparent".into(),
+            "0px".into(),
+            None,
             None,
         ),
         StyleId::Material => (
             material::shadow(tweaks.glow, mode.is_dark()),
-            roles.outline.hex(),
+            "transparent".into(),
             "0px".into(),
             None,
             None,
         ),
         StyleId::Flat => (
             flat::shadow(),
-            roles.outline.hex(),
-            "1px".into(),
+            "transparent".into(),
+            "0px".into(),
             None,
             None,
         ),
         StyleId::Starship => (
-            starship::shadow(tweaks.glow, &roles.primary.hex()),
-            roles.primary.hex(),
-            "1px".into(),
+            "none".into(),
+            "transparent".into(),
+            "0px".into(),
             None,
             None,
         ),
@@ -262,13 +322,9 @@ fn paint_shape(
     set(vars, "ha-card-box-shadow", shadow);
     set(vars, "ha-card-border-color", border);
     set(vars, "ha-card-border-width", border_width);
-    if let Some(blur) = blur {
-        if blur > 0.0 && alpha < 0.999 {
-            set(
-                vars,
-                "ha-card-backdrop-filter",
-                format!("blur({}px)", blur.round() as i32),
-            );
+    if let Some(filter) = filter {
+        if alpha < 0.999 {
+            set(vars, "ha-card-backdrop-filter", filter);
         }
     }
     if let Some(dialog) = dialog {
@@ -323,27 +379,75 @@ fn paint_state(vars: &mut BTreeMap<String, ThemeValue>, roles: &Roles) {
     set(vars, "state-person-home-color", get("green").hex());
 }
 
-fn paint_type(vars: &mut BTreeMap<String, ThemeValue>) {
-    set(vars, "ha-font-family-body", "Roboto, Noto, sans-serif");
-    set(vars, "ha-font-family-heading", "Roboto, Noto, sans-serif");
-    set(
-        vars,
-        "ha-font-family-code",
-        "Roboto Mono, ui-monospace, monospace",
-    );
-    set(vars, "ha-font-size-s", "12px");
-    set(vars, "ha-font-size-m", "14px");
-    set(vars, "ha-font-size-l", "16px");
-    set(vars, "ha-font-size-xl", "20px");
-    set(vars, "ha-font-size-2xl", "24px");
-    set(vars, "ha-font-weight-normal", "400");
-    set(vars, "ha-font-weight-medium", "500");
-    set(vars, "ha-font-weight-bold", "700");
-    set(vars, "ha-line-height-normal", "1.5");
+fn paint_type(vars: &mut BTreeMap<String, ThemeValue>, style: StyleId) {
+    let (body, heading, code, sizes, weights, line) = match style {
+        StyleId::Sheer => (
+            "\"Segoe UI\", Noto, sans-serif",
+            "\"Segoe UI\", Noto, sans-serif",
+            "ui-monospace, monospace",
+            ("12px", "14px", "16px", "22px", "28px"),
+            ("400", "500", "600"),
+            "1.45",
+        ),
+        StyleId::Bubbles => (
+            "ui-rounded, Nunito, sans-serif",
+            "ui-rounded, Nunito, sans-serif",
+            "ui-monospace, monospace",
+            ("13px", "16px", "18px", "26px", "34px"),
+            ("500", "700", "800"),
+            "1.3",
+        ),
+        StyleId::Material => (
+            "Roboto, Noto, sans-serif",
+            "Roboto, Noto, sans-serif",
+            "\"Roboto Mono\", ui-monospace, monospace",
+            ("12px", "14px", "16px", "22px", "28px"),
+            ("400", "500", "700"),
+            "1.5",
+        ),
+        StyleId::Flat => (
+            "\"Segoe UI\", \"Helvetica Neue\", sans-serif",
+            "\"Segoe UI\", \"Helvetica Neue\", sans-serif",
+            "ui-monospace, monospace",
+            ("13px", "16px", "20px", "32px", "44px"),
+            ("500", "700", "800"),
+            "1.2",
+        ),
+        StyleId::Starship => (
+            "Antonio, \"Arial Narrow\", sans-serif",
+            "Antonio, \"Arial Narrow\", sans-serif",
+            "Antonio, \"Arial Narrow\", sans-serif",
+            ("12px", "14px", "16px", "22px", "28px"),
+            ("700", "700", "700"),
+            "1.15",
+        ),
+    };
+    set(vars, "ha-font-family-body", body);
+    set(vars, "ha-font-family-heading", heading);
+    set(vars, "ha-font-family-code", code);
+    set(vars, "ha-font-size-s", sizes.0);
+    set(vars, "ha-font-size-m", sizes.1);
+    set(vars, "ha-font-size-l", sizes.2);
+    set(vars, "ha-font-size-xl", sizes.3);
+    set(vars, "ha-font-size-2xl", sizes.4);
+    set(vars, "ha-font-weight-normal", weights.0);
+    set(vars, "ha-font-weight-medium", weights.1);
+    set(vars, "ha-font-weight-bold", weights.2);
+    set(vars, "ha-line-height-normal", line);
 }
 
-fn paint_bubble(vars: &mut BTreeMap<String, ThemeValue>, roles: &Roles, tweaks: Tweaks) {
-    let radius = format!("{}px", tweaks.roundness.round() as i32);
+fn paint_bubble(
+    vars: &mut BTreeMap<String, ThemeValue>,
+    style: StyleId,
+    roles: &Roles,
+    tweaks: Tweaks,
+) {
+    let radius = match style {
+        StyleId::Flat => "0px".into(),
+        StyleId::Material => format!("{}px", material::card_radius(tweaks.roundness)),
+        StyleId::Starship => "999px".into(),
+        StyleId::Bubbles | StyleId::Sheer => format!("{}px", tweaks.roundness.round() as i32),
+    };
     set(vars, "bubble-border-radius", radius);
     set(vars, "bubble-accent-color", roles.primary.hex());
     set(
@@ -357,15 +461,40 @@ fn paint_bubble(vars: &mut BTreeMap<String, ThemeValue>, roles: &Roles, tweaks: 
         "bubble-secondary-background-color",
         roles.surface2.hex(),
     );
-    set(vars, "bubble-button-border-radius", "999px");
-    set(vars, "bubble-icon-border-radius", "999px");
+    let control = match style {
+        StyleId::Flat => "0px",
+        StyleId::Material => "20px",
+        StyleId::Sheer | StyleId::Bubbles | StyleId::Starship => "999px",
+    };
+    set(vars, "bubble-button-border-radius", control);
+    set(vars, "bubble-icon-border-radius", control);
     set(vars, "bubble-select-arrow", "0px");
 }
 
-fn paint_mushroom(vars: &mut BTreeMap<String, ThemeValue>, roles: &Roles, tweaks: Tweaks) {
-    let radius = match tweaks.roundness {
-        r if r >= 24.0 => "999px".into(),
-        r => format!("{}px", (r * 0.5).round() as i32),
+fn paint_mushroom(
+    vars: &mut BTreeMap<String, ThemeValue>,
+    style: StyleId,
+    roles: &Roles,
+    tweaks: Tweaks,
+) {
+    let radius = match style {
+        StyleId::Flat => "0px".into(),
+        StyleId::Material => "12px".into(),
+        StyleId::Starship | StyleId::Bubbles => "999px".into(),
+        StyleId::Sheer => {
+            let r = tweaks.roundness;
+            if r >= 24.0 {
+                "999px".into()
+            } else {
+                format!("{}px", (r * 0.5).round() as i32)
+            }
+        }
+    };
+    let spacing = match style {
+        StyleId::Flat => "16px",
+        StyleId::Bubbles => "12px",
+        StyleId::Starship => "6px",
+        StyleId::Sheer | StyleId::Material => "8px",
     };
     set(vars, "mush-rgb-primary", roles.primary.triplet());
     set(vars, "mush-rgb-state-entity", roles.accent.triplet());
@@ -398,7 +527,64 @@ fn paint_mushroom(vars: &mut BTreeMap<String, ThemeValue>, roles: &Roles, tweaks
     set(vars, "mush-icon-border-radius", radius);
     set(vars, "mush-control-border-radius", "999px");
     set(vars, "mush-chip-border-radius", "999px");
-    set(vars, "mush-spacing", "8px");
+    set(vars, "mush-spacing", spacing);
+}
+
+fn paint_console(vars: &mut BTreeMap<String, ThemeValue>, roles: &Roles, tweaks: Tweaks) {
+    let blocks = starship::console_blocks(roles.primary);
+    set(vars, "console-orange", blocks.orange.hex());
+    set(vars, "console-peach", blocks.peach.hex());
+    set(vars, "console-lavender", blocks.lavender.hex());
+    set(vars, "console-blue", blocks.blue.hex());
+    set(vars, "console-red", blocks.red.hex());
+    set(vars, "console-ink", blocks.ink.hex());
+    set(
+        vars,
+        "console-cap",
+        format!("{}px", tweaks.roundness.round() as i32),
+    );
+    let bar = starship::bar_thickness(tweaks.glow);
+    set(vars, "console-bar", format!("{bar}px"));
+    set(
+        vars,
+        "ha-card-box-shadow",
+        format!(
+            "inset 14px 0 0 {}, inset 0 {bar}px 0 {}",
+            blocks.blue.hex(),
+            blocks.orange.hex()
+        ),
+    );
+}
+
+fn console_surfaces(style: StyleId, roles: &Roles, mode: ColorMode) -> (Rgb, Rgb, Rgb, Rgb) {
+    if style != StyleId::Starship {
+        return (roles.bg, roles.surface, roles.surface2, roles.sidebar);
+    }
+    if mode.is_dark() {
+        (
+            mix(roles.bg, Rgb::BLACK, 0.86),
+            mix(roles.surface, Rgb::BLACK, 0.78),
+            mix(roles.surface2, Rgb::BLACK, 0.62),
+            mix(roles.sidebar, Rgb::BLACK, 0.92),
+        )
+    } else {
+        (
+            mix(roles.bg, Rgb::WHITE, 0.55),
+            mix(roles.surface, Rgb::WHITE, 0.35),
+            mix(roles.surface2, Rgb::WHITE, 0.2),
+            mix(roles.sidebar, Rgb::WHITE, 0.4),
+        )
+    }
+}
+
+fn mix(a: Rgb, b: Rgb, toward_b: f64) -> Rgb {
+    let t = toward_b.clamp(0.0, 1.0);
+    let channel = |from: u8, to: u8| -> u8 {
+        (f64::from(from) * (1.0 - t) + f64::from(to) * t)
+            .round()
+            .clamp(0.0, 255.0) as u8
+    };
+    Rgb::new(channel(a.r, b.r), channel(a.g, b.g), channel(a.b, b.b))
 }
 
 fn card_mod_css(style: StyleId) -> Option<&'static str> {
