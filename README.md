@@ -2,23 +2,43 @@
 
 Turn your photos into complete Home Assistant themes, in the style you pick.
 
-![HomeChameleon editor](docs/hero.png)
+![Sheer, Starship Console, Bubbles, Material, and Flat](docs/hero.png)
 
 HomeChameleon is not affiliated with or endorsed by the Open Home Foundation or Home Assistant, and is not affiliated with ha-chameleon. ha-chameleon colors RGB lights. HomeChameleon builds dashboard themes.
 
 An unofficial Cursor and Grok Bot plugin, Holly for Home Assistant, lives in [`holly-for-home-assistant/`](holly-for-home-assistant/).
 
-## Styles gallery
+## Styles
 
-The same sample palette, in dark mode. Sheer is a frosted pane over colorful orbs. Bubbles is puffy and round. Material follows a tonal shape scale. Flat is sharp color blocking. Starship Console is a sweep-elbow console with thick capped bars.
+One sample palette, in dark mode. Each style has its own shape.
+
+### Sheer
+
+Frosted panes over colorful orbs, with a light rim, a soft shadow, and near-white titles.
 
 ![Sheer](docs/styles/sheer.png)
 
+### Bubbles
+
+Blob cards, a puffy cushion, and chunky round controls.
+
 ![Bubbles](docs/styles/bubbles.png)
+
+### Material
+
+Tonal surfaces, elevation, and a 12 to 28 pixel shape scale.
 
 ![Material](docs/styles/material.png)
 
+### Flat
+
+No shadows. Square controls, large type, and solid color blocks.
+
 ![Flat](docs/styles/flat.png)
+
+### Starship Console
+
+A sweep-elbow console: thick capped bars, numeric labels, and condensed uppercase type.
 
 ![Starship Console](docs/styles/starship.png)
 
