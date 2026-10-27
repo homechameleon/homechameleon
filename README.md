@@ -47,6 +47,10 @@ HomeChameleon does not edit `configuration.yaml`. If those lines are missing, it
 
 Snapshots live in `www/homechameleon/snapshots/`. Administrators can list them, read one, restore a storage dashboard, and delete them at `/api/homechameleon/snapshots`. A YAML dashboard can be copied, and restoring it is refused, because HomeChameleon does not edit that file. Snapshot files are served from `/local/` the same way a wallpaper is.
 
+`POST /api/homechameleon/room` takes an area id or an area name and returns a Lovelace view for that area. It reads the area and its entities when the request arrives. The view uses core cards unless Mushroom or Bubble Card is installed, and then only for ordinary entities. Locks, garage covers, and alarm panels ask for confirmation. Cameras are view only. The response is the view, as JSON and YAML. It does not write a dashboard. `GET /api/homechameleon/areas` lists areas for the panel. Both routes are limited to administrators.
+
+In the Home Assistant panel, the Room tab previews that view with the theme you are editing, in light and dark, before anything is applied.
+
 Home Assistant accepts an HTTP request body of up to 16 MB. A generate request larger than that is rejected by Home Assistant before this integration can answer. Once the body is read, any image over 10 MB is rejected with HTTP 413.
 
 A background is off unless you turn it on. When it is on, the theme points at `/local/homechameleon/…`. Home Assistant serves files under `/local/` without a login, so anyone who can reach the instance and guess the file name can download that wallpaper. The first time `config/www` is created, restart Home Assistant once so `/local/` is served.

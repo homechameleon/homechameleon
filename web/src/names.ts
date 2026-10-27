@@ -22,7 +22,7 @@ export type PreviewSide = "dark" | "light";
 export type ExtractionId = "normal" | "pastel" | "material" | "colorful" | "muted";
 export type RoleKey = "bg" | "surface" | "primary" | "accent" | "text" | "success" | "warn" | "error";
 export type DeviceId = "desktop" | "tablet" | "phone";
-export type TabId = "editor" | "wallpaper" | "blueprints" | "yaml";
+export type TabId = "editor" | "wallpaper" | "blueprints" | "room" | "yaml";
 export type PaletteFormat =
   | "omarchy-colors-toml"
   | "base16"

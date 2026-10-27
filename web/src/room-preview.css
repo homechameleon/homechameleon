@@ -1,0 +1,122 @@
+:host {
+  display: block;
+  height: 100%;
+  min-height: 0;
+}
+
+.viewport {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.side-label {
+  margin: 0;
+  color: #9aabc2;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.frame {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.frame[data-device="phone"] .sheet {
+  font-size: 13px;
+}
+
+.empty {
+  margin: auto;
+  color: #9aa6ba;
+}
+
+.sheet {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px;
+  border-radius: var(--ha-card-border-radius, 18px);
+  background: var(--primary-background-color, #10151d);
+  color: var(--primary-text-color, #e7edf7);
+  box-shadow: var(--ha-card-box-shadow, none);
+  font-family: var(--ha-font-family-body, sans-serif);
+}
+
+.banner h2,
+section h3 {
+  margin: 0;
+}
+
+.banner h2 {
+  font-size: 1.4rem;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.facts span,
+.badge,
+.rcard .muted {
+  color: var(--secondary-text-color, var(--primary-text-color));
+  font-size: 12px;
+}
+
+.facts button,
+.badge {
+  border: 0;
+  border-radius: var(--ha-border-radius-md, 999px);
+  background: var(--primary-color, #3d6df0);
+  color: var(--text-primary-color, #fff);
+  padding: 4px 10px;
+  font: inherit;
+}
+
+.badge {
+  background: color-mix(in srgb, var(--warning-color, var(--primary-color, #3d6df0)) 22%, transparent);
+  color: var(--primary-text-color, inherit);
+}
+
+section {
+  margin-top: 16px;
+}
+
+section h3 {
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+}
+
+.rcard {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border-radius: var(--ha-card-border-radius, 12px);
+  background: var(--card-background-color, var(--ha-card-background, rgba(255, 255, 255, 0.06)));
+}
+
+.rcard div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  white-space: nowrap;
+}
