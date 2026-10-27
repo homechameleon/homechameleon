@@ -5,7 +5,7 @@ import { unzipSync, strFromU8 } from "fflate";
 import { describe, expect, it } from "vitest";
 
 import { SHEER_NAME } from "./names";
-import { detectPalette, fnv32, freshSnapshot, slugify, stitchYaml } from "./model";
+import { detectPalette, fnv32, freshSnapshot, slugify, stitchYaml, viewTargetFromDashboard } from "./model";
 import { buildZip } from "./zip";
 
 describe("editor helpers", () => {
@@ -33,6 +33,17 @@ describe("editor helpers", () => {
   it("slugifies theme names", () => {
     expect(slugify("Home Chameleon")).toBe("home-chameleon");
     expect(slugify("")).toBe("theme");
+  });
+
+  it("targets a view by path, or by index when the view has no path", () => {
+    expect(viewTargetFromDashboard({ urlPath: "lovelace", path: "home", index: 0 })).toEqual({
+      url_path: "lovelace",
+      path: "home",
+    });
+    expect(viewTargetFromDashboard({ urlPath: "lovelace", path: null, index: 2 })).toEqual({
+      url_path: "lovelace",
+      index: 2,
+    });
   });
 
   it("omits the wallpaper folder when the background is off", () => {

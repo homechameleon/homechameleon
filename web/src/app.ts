@@ -37,6 +37,7 @@ import {
   stitchCss,
   stitchYaml,
   varCount,
+  viewTargetFromDashboard,
 } from "./model";
 import { type GenResult, type RoleColors, parseResult, rampColors } from "./result";
 import { buildZip, cardModSnippet } from "./zip";
@@ -112,7 +113,10 @@ export class HcApp extends LitElement {
   @state() private dragOver = false;
   @state() private paletteText = "";
   @state() private applying = false;
-  @state() private applyDefault = true;
+  @state() private applyDefault = false;
+  @state() private applyTarget = "";
+  @state() private viewChoices: { key: string; label: string }[] = [];
+  @state() private undoReady = false;
 
   private readonly panelMode = new URLSearchParams(window.location.search).get("panel") === "1";
 
@@ -150,6 +154,7 @@ export class HcApp extends LitElement {
       }
     }
     this.schedule(this.snap.importedData ? "full" : "fast");
+    if (this.panelMode) void this.loadPanelState();
     window.addEventListener("keydown", this.onKey);
   }
 
@@ -198,6 +203,14 @@ export class HcApp extends LitElement {
           <button class="primary" ?disabled=${!this.exportYaml} @click=${() => void this.exportZip()}>Export zip</button>
           ${this.panelMode
             ? html`
+                <select class="apply-target" aria-label="Apply to" @change=${this.onApplyTarget}>
+                  <option value="" ?selected=${this.applyTarget === ""}>Theme files only</option>
+                  ${this.viewChoices.map(
+                    (choice) => html`
+                      <option value=${choice.key} ?selected=${this.applyTarget === choice.key}>${choice.label}</option>
+                    `,
+                  )}
+                </select>
                 <label class="apply-default">
                   <input
                     type="checkbox"
@@ -208,6 +221,9 @@ export class HcApp extends LitElement {
                   />
                   Use as the default theme
                 </label>
+                <button class="ghost" ?disabled=${!this.undoReady || this.applying} @click=${() => void this.undoTheme()}>
+                  Undo theme
+                </button>
                 <button class="primary" ?disabled=${!this.exportYaml || this.applying} @click=${() => void this.applyTheme()}>
                   Apply
                 </button>
@@ -696,6 +712,55 @@ export class HcApp extends LitElement {
     this.bgKey = key;
   }
 
+  private onApplyTarget = (event: Event): void => {
+    this.applyTarget = (event.target as HTMLSelectElement).value;
+  };
+
+  private async loadPanelState(): Promise<void> {
+    try {
+      const response = await fetch("/api/homechameleon/dashboards", { credentials: "same-origin" });
+      if (response.ok) {
+        const payload = (await response.json()) as {
+          dashboards?: {
+            url_path?: string;
+            title?: string;
+            views?: { index?: number; path?: string | null; title?: string }[];
+          }[];
+        };
+        const choices: { key: string; label: string }[] = [];
+        for (const board of payload.dashboards ?? []) {
+          if (!board.url_path) continue;
+          for (const view of board.views ?? []) {
+            const index = typeof view.index === "number" ? view.index : 0;
+            const target = viewTargetFromDashboard({
+              urlPath: board.url_path,
+              path: view.path ?? null,
+              index,
+            });
+            const viewTitle = view.title || view.path || `View ${index + 1}`;
+            choices.push({
+              key: JSON.stringify(target),
+              label: `${board.title || board.url_path} / ${viewTitle}`,
+            });
+          }
+        }
+        this.viewChoices = choices;
+        if (!choices.some((choice) => choice.key === this.applyTarget)) this.applyTarget = "";
+      }
+    } catch {
+      /* The editor is open outside Home Assistant. */
+    }
+    try {
+      const response = await fetch("/api/homechameleon/undo", { credentials: "same-origin" });
+      if (response.ok) {
+        const payload = (await response.json()) as { available?: boolean };
+        this.undoReady = Boolean(payload.available);
+      }
+    } catch {
+      /* The editor is open outside Home Assistant. */
+    }
+  }
+
   private async applyTheme(): Promise<void> {
     await this.flush("full");
     const yaml = this.lockedYaml();
@@ -705,6 +770,15 @@ export class HcApp extends LitElement {
       this.snap.backgroundEnabled && this.bgBytes && this.bgFileName
         ? { enabled: true, path: this.bgFileName, data: bytesToBase64(this.bgBytes) }
         : { enabled: false };
+    let view: ReturnType<typeof viewTargetFromDashboard> | null = null;
+    if (this.applyTarget) {
+      try {
+        view = JSON.parse(this.applyTarget) as ReturnType<typeof viewTargetFromDashboard>;
+      } catch {
+        this.notice = "Pick a dashboard view again";
+        return;
+      }
+    }
     this.applying = true;
     this.notice = "";
     try {
@@ -717,17 +791,54 @@ export class HcApp extends LitElement {
           yaml,
           set_default: this.applyDefault,
           background,
+          ...(view ? { view } : {}),
         }),
       });
-      const payload = (await response.json()) as { error?: string; theme?: string; warnings?: string[] };
+      const payload = (await response.json()) as {
+        error?: string;
+        theme?: string;
+        warnings?: string[];
+        undo?: boolean;
+        view?: unknown;
+      };
       if (!response.ok) {
         this.notice = payload.error ?? "Apply failed";
         return;
       }
-      this.notice = payload.theme ? `Applied ${payload.theme}` : "Applied";
+      this.undoReady = Boolean(payload.undo);
+      this.notice = payload.theme
+        ? payload.view
+          ? `Applied ${payload.theme} to this view`
+          : `Applied ${payload.theme}`
+        : "Applied";
       if (payload.warnings?.length) this.warnings = [...this.warnings, ...payload.warnings];
+      void this.loadPanelState();
     } catch (error) {
       this.notice = error instanceof Error ? error.message : "Apply failed";
+    } finally {
+      this.applying = false;
+    }
+  }
+
+  private async undoTheme(): Promise<void> {
+    this.applying = true;
+    this.notice = "";
+    try {
+      const response = await fetch("/api/homechameleon/undo", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const payload = (await response.json()) as { error?: string; warnings?: string[] };
+      if (!response.ok) {
+        this.notice = payload.error ?? "Could not restore the previous theme";
+        return;
+      }
+      this.undoReady = false;
+      this.notice = "Restored the previous theme";
+      if (payload.warnings?.length) this.warnings = [...this.warnings, ...payload.warnings];
+      void this.loadPanelState();
+    } catch (error) {
+      this.notice = error instanceof Error ? error.message : "Could not restore the previous theme";
     } finally {
       this.applying = false;
     }

@@ -10,20 +10,28 @@ from pathlib import Path
 
 from homeassistant.core import HomeAssistant
 
-from .const import BACKGROUND_FILE_RE_SOURCE, SLUG_RE_SOURCE
+from .const import BACKGROUND_FILE_RE_SOURCE, RESERVED_WWW_DIRS, SLUG_RE_SOURCE
 
 SLUG_RE = re.compile(SLUG_RE_SOURCE)
 _BG_FILE_RE = re.compile(BACKGROUND_FILE_RE_SOURCE)
+SNAPSHOT_ID_RE = re.compile(r"^[a-z0-9_-]{1,80}$")
 
 
 class PathError(ValueError):
     """A slug or path would leave the allowed directories."""
 
 
-def theme_yaml_path(config_dir: str, slug: str) -> Path:
-    """Return themes/<slug>.yaml, or raise if the slug is not safe."""
+def _require_theme_slug(slug: str) -> None:
+    """Reject slugs that leave themes/ or collide with snapshot storage."""
+    if slug in RESERVED_WWW_DIRS:
+        raise PathError("theme name is reserved")
     if not SLUG_RE.fullmatch(slug):
         raise PathError("theme name is not a safe file name")
+
+
+def theme_yaml_path(config_dir: str, slug: str) -> Path:
+    """Return themes/<slug>.yaml, or raise if the slug is not safe."""
+    _require_theme_slug(slug)
     root = Path(config_dir, "themes").resolve()
     dest = (root / f"{slug}.yaml").resolve()
     if dest.parent != root:
@@ -33,8 +41,7 @@ def theme_yaml_path(config_dir: str, slug: str) -> Path:
 
 def background_path(config_dir: str, slug: str, relative: str) -> Path:
     """Return www/homechameleon/<slug>/<file>, or raise."""
-    if not SLUG_RE.fullmatch(slug):
-        raise PathError("theme name is not a safe file name")
+    _require_theme_slug(slug)
     name = Path(relative).name
     parent = Path(relative).parent.as_posix()
     if parent not in {slug, "."} or not _BG_FILE_RE.fullmatch(name):
@@ -47,10 +54,36 @@ def background_path(config_dir: str, slug: str, relative: str) -> Path:
     return dest
 
 
+def www_root(config_dir: str) -> Path:
+    """Return the resolved www/homechameleon directory."""
+    return Path(config_dir, "www", "homechameleon").resolve()
+
+
+def snapshot_file(config_dir: str, snapshot_id: str) -> Path:
+    """Return www/homechameleon/snapshots/<id>.json, or raise."""
+    if not SNAPSHOT_ID_RE.fullmatch(snapshot_id):
+        raise PathError("snapshot name is not allowed")
+    root = www_root(config_dir)
+    folder = (root / "snapshots").resolve()
+    dest = (folder / f"{snapshot_id}.json").resolve()
+    if folder.parent != root or dest.parent != folder:
+        raise PathError("snapshot name is not allowed")
+    return dest
+
+
+def undo_file(config_dir: str) -> Path:
+    """Return www/homechameleon/undo/theme.json."""
+    root = www_root(config_dir)
+    folder = (root / "undo").resolve()
+    dest = (folder / "theme.json").resolve()
+    if folder.parent != root or dest.parent != folder:
+        raise PathError("undo path is not allowed")
+    return dest
+
+
 def theme_dir_path(config_dir: str, slug: str) -> Path:
     """Return www/homechameleon/<slug>, or raise."""
-    if not SLUG_RE.fullmatch(slug):
-        raise PathError("theme name is not a safe file name")
+    _require_theme_slug(slug)
     root = Path(config_dir, "www", "homechameleon").resolve()
     dest = (root / slug).resolve()
     if dest.parent != root:

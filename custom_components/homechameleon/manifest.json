@@ -1,6 +1,7 @@
 {
   "domain": "homechameleon",
   "name": "HomeChameleon",
+  "after_dependencies": ["lovelace"],
   "codeowners": ["@homechameleon"],
   "config_flow": true,
   "dependencies": ["http"],

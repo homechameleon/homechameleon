@@ -265,6 +265,21 @@ export function applyLocks(css: string, locks: Partial<Record<RoleKey, string>>)
   return next;
 }
 
+export interface ViewTarget {
+  url_path: string;
+  path?: string;
+  index?: number;
+}
+
+export function viewTargetFromDashboard(input: {
+  urlPath: string;
+  path: string | null;
+  index: number;
+}): ViewTarget {
+  if (input.path) return { url_path: input.urlPath, path: input.path };
+  return { url_path: input.urlPath, index: input.index };
+}
+
 export function applyLocksToYaml(yaml: string, locks: Partial<Record<RoleKey, string>>): string {
   let next = yaml;
   for (const [role, hex] of Object.entries(locks) as [RoleKey, string][]) {

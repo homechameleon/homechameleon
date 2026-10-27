@@ -10,6 +10,10 @@ ISSUE_THEMES_INCLUDE = "themes_include"
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
 MAX_IMAGES = 8
 MAX_YAML_BYTES = 1_000_000
+MAX_SNAPSHOT_BYTES = 5 * 1024 * 1024
+
+# Directories under www/homechameleon/ that are not theme folders.
+RESERVED_WWW_DIRS = frozenset({"snapshots", "undo"})
 
 THEMES_INCLUDE_LINES = "frontend:\n  themes: !include_dir_merge_named themes"
 THEMES_INCLUDE_MARKER = "!include_dir_merge_named themes"
