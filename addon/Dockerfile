@@ -7,6 +7,7 @@ RUN apk add --no-cache git musl-dev
 WORKDIR /src
 COPY server /src/server
 COPY fetch-core.sh /fetch-core.sh
+COPY fixtures/tokyo-night.colors.toml /omarchy/tests/fixtures/tokyo-night.colors.toml
 RUN sh /fetch-core.sh
 WORKDIR /src/server
 RUN cargo build --release
