@@ -1,0 +1,21 @@
+# Home Assistant add-on. There is no token option.
+# The Supervisor token is the only credential.
+name: HomeChameleon
+version: "0.1.0"
+slug: homechameleon
+description: >-
+  Turn your photos into complete Home Assistant themes.
+  For installations that do not use HACS.
+  Writes theme files and optional wallpapers, and does not edit configuration.yaml.
+url: https://github.com/homechameleon/homechameleon
+arch:
+  - aarch64
+  - amd64
+init: false
+homeassistant_api: true
+ingress: true
+panel_icon: mdi:palette
+map:
+  - type: homeassistant_config
+    read_only: false
+    path: /config

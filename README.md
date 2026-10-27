@@ -41,6 +41,12 @@ HomeChameleon does not edit `configuration.yaml`. If those lines are missing, it
 
 4. Go to Settings, then Devices & services, and add HomeChameleon. Open the HomeChameleon sidebar item. That page is limited to administrators.
 
+## Install without HACS
+
+The same editor is also a Home Assistant add-on for installations that do not use HACS. Add `https://github.com/homechameleon/homechameleon` in Settings, then Apps, in the repositories menu. Install the HomeChameleon add-on and start it. Open the HomeChameleon sidebar entry. That page is limited to administrators.
+
+The add-on uses the Supervisor token. It does not ask for a user access token. It writes `config/themes/<slug>.yaml` and, only when a background is on, `config/www/homechameleon/<slug>/`. It does not edit `configuration.yaml`. Add the themes include above if it is not there yet. Details are in [addon/DOCS.md](addon/DOCS.md).
+
 `POST /api/homechameleon/generate` accepts the same JSON the Omarchy helper sends, or multipart form data. It runs the same `homechameleon-core` WebAssembly module under Wasmtime, after Pillow decodes the images. Pillow is the copy Home Assistant already installs, so the manifest does not list it. Wasmtime is the extra requirement. `POST /api/homechameleon/preview` returns the theme and writes nothing.
 
 `POST /api/homechameleon/apply` can name one dashboard view (`view.url_path` plus `view.path` or `view.index`). That request records the global theme, each user's theme, and the view's theme, stores a snapshot of the dashboard, then sets the view. `set_default` stays off unless the request sets it. `POST /api/homechameleon/undo` puts the recorded themes back in one step.

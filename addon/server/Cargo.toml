@@ -1,0 +1,11 @@
+[package]
+name = "homechameleon-addon"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+rust-version = "1.97"
+publish = false
+description = "Home Assistant add-on server for HomeChameleon"
+
+[dependencies]
+homechameleon-core = { path = "../../crates/homechameleon-core" }

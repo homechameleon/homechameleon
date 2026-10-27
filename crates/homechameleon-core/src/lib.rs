@@ -28,9 +28,11 @@ mod yaml;
 #[cfg(feature = "wasm")]
 mod wasm;
 
+pub use b64::decode as decode_base64;
 pub use color::Rgb;
 pub use fixture::{fixture_report, gradient};
 pub use generate::generate;
+pub use json::{parse as parse_json, Json};
 pub use palette::{PaletteDocument, SCHEMA};
 pub use types::{
     slugify, styles, BackgroundOptions, ContrastReport, ContrastTarget, ExtractionMode,

@@ -78,6 +78,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "homechameleon-addon"
+version = "0.1.0"
+dependencies = [
+ "homechameleon-core",
+]
+
+[[package]]
 name = "homechameleon-core"
 version = "0.1.0"
 dependencies = [
