@@ -10,7 +10,7 @@ An unofficial Cursor and Grok Bot plugin, Holly for Home Assistant, lives in [`h
 
 ## Styles gallery
 
-The same sample palette, in dark mode. Sheer is frosted. Bubbles is puffy and round. Material follows a tonal shape scale. Flat is sharp color blocking. Starship Console is a bar-and-sweep console.
+The same sample palette, in dark mode. Sheer is a frosted pane over colorful orbs. Bubbles is puffy and round. Material follows a tonal shape scale. Flat is sharp color blocking. Starship Console is a sweep-elbow console with thick capped bars.
 
 ![Sheer](docs/styles/sheer.png)
 

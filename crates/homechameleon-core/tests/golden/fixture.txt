@@ -14,7 +14,7 @@ Desk:
       blue-grey-color: "#556574"
       brown-color: "#8c5453"
       bubble-accent-color: "#bc004b"
-      bubble-border-radius: "24px"
+      bubble-border-radius: "28px"
       bubble-button-border-radius: "999px"
       bubble-icon-background-color: "rgba(188, 0, 75, 0.18)"
       bubble-icon-border-radius: "999px"
@@ -57,17 +57,17 @@ Desk:
       error-color: "#b52238"
       green-color: "#476e00"
       grey-color: "#777777"
-      ha-border-radius-lg: "24px"
-      ha-border-radius-md: "16px"
+      ha-border-radius-lg: "28px"
+      ha-border-radius-md: "18px"
       ha-border-radius-pill: "999px"
       ha-border-radius-sm: "8px"
-      ha-border-radius-xl: "24px"
+      ha-border-radius-xl: "28px"
       ha-card-backdrop-filter: "blur(28px) saturate(173%)"
       ha-card-background: "rgba(223, 243, 228, 0.30)"
       ha-card-border-color: "rgba(255, 255, 255, 0.46)"
-      ha-card-border-radius: "24px"
+      ha-card-border-radius: "28px"
       ha-card-border-width: "1px"
-      ha-card-box-shadow: "0 16px 37px rgba(0,0,0,0.19),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08)"
+      ha-card-box-shadow: "0 25px 57px rgba(0,0,0,0.19),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08)"
       ha-dialog-scrim-backdrop-filter: "blur(28px) saturate(173%)"
       ha-font-family-body: "\"Segoe UI\", Noto, sans-serif"
       ha-font-family-code: "ui-monospace, monospace"
@@ -156,7 +156,7 @@ Desk:
       blue-grey-color: "#b8c8d9"
       brown-color: "#fcb4b2"
       bubble-accent-color: "#ffb2be"
-      bubble-border-radius: "24px"
+      bubble-border-radius: "28px"
       bubble-button-border-radius: "999px"
       bubble-icon-background-color: "rgba(255, 178, 190, 0.18)"
       bubble-icon-border-radius: "999px"
@@ -199,17 +199,17 @@ Desk:
       error-color: "#ffb3b4"
       green-color: "#a5d560"
       grey-color: "#ababab"
-      ha-border-radius-lg: "24px"
-      ha-border-radius-md: "16px"
+      ha-border-radius-lg: "28px"
+      ha-border-radius-md: "18px"
       ha-border-radius-pill: "999px"
       ha-border-radius-sm: "8px"
-      ha-border-radius-xl: "24px"
+      ha-border-radius-xl: "28px"
       ha-card-backdrop-filter: "blur(28px) saturate(173%)"
       ha-card-background: "rgba(31, 48, 38, 0.30)"
       ha-card-border-color: "rgba(255, 255, 255, 0.46)"
-      ha-card-border-radius: "24px"
+      ha-card-border-radius: "28px"
       ha-card-border-width: "1px"
-      ha-card-box-shadow: "0 16px 37px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08)"
+      ha-card-box-shadow: "0 25px 57px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08)"
       ha-dialog-scrim-backdrop-filter: "blur(28px) saturate(173%)"
       ha-font-family-body: "\"Segoe UI\", Noto, sans-serif"
       ha-font-family-code: "ui-monospace, monospace"
@@ -299,7 +299,7 @@ Desk:
 --blue-grey-color: #556574;
 --brown-color: #8c5453;
 --bubble-accent-color: #bc004b;
---bubble-border-radius: 24px;
+--bubble-border-radius: 28px;
 --bubble-button-border-radius: 999px;
 --bubble-icon-background-color: rgba(188, 0, 75, 0.18);
 --bubble-icon-border-radius: 999px;
@@ -342,17 +342,17 @@ Desk:
 --error-color: #b52238;
 --green-color: #476e00;
 --grey-color: #777777;
---ha-border-radius-lg: 24px;
---ha-border-radius-md: 16px;
+--ha-border-radius-lg: 28px;
+--ha-border-radius-md: 18px;
 --ha-border-radius-pill: 999px;
 --ha-border-radius-sm: 8px;
---ha-border-radius-xl: 24px;
+--ha-border-radius-xl: 28px;
 --ha-card-backdrop-filter: blur(28px) saturate(173%);
 --ha-card-background: rgba(223, 243, 228, 0.30);
 --ha-card-border-color: rgba(255, 255, 255, 0.46);
---ha-card-border-radius: 24px;
+--ha-card-border-radius: 28px;
 --ha-card-border-width: 1px;
---ha-card-box-shadow: 0 16px 37px rgba(0,0,0,0.19),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08);
+--ha-card-box-shadow: 0 25px 57px rgba(0,0,0,0.19),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08);
 --ha-dialog-scrim-backdrop-filter: blur(28px) saturate(173%);
 --ha-font-family-body: "Segoe UI", Noto, sans-serif;
 --ha-font-family-code: ui-monospace, monospace;
@@ -442,7 +442,7 @@ Desk:
 --blue-grey-color: #b8c8d9;
 --brown-color: #fcb4b2;
 --bubble-accent-color: #ffb2be;
---bubble-border-radius: 24px;
+--bubble-border-radius: 28px;
 --bubble-button-border-radius: 999px;
 --bubble-icon-background-color: rgba(255, 178, 190, 0.18);
 --bubble-icon-border-radius: 999px;
@@ -485,17 +485,17 @@ Desk:
 --error-color: #ffb3b4;
 --green-color: #a5d560;
 --grey-color: #ababab;
---ha-border-radius-lg: 24px;
---ha-border-radius-md: 16px;
+--ha-border-radius-lg: 28px;
+--ha-border-radius-md: 18px;
 --ha-border-radius-pill: 999px;
 --ha-border-radius-sm: 8px;
---ha-border-radius-xl: 24px;
+--ha-border-radius-xl: 28px;
 --ha-card-backdrop-filter: blur(28px) saturate(173%);
 --ha-card-background: rgba(31, 48, 38, 0.30);
 --ha-card-border-color: rgba(255, 255, 255, 0.46);
---ha-card-border-radius: 24px;
+--ha-card-border-radius: 28px;
 --ha-card-border-width: 1px;
---ha-card-box-shadow: 0 16px 37px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08);
+--ha-card-box-shadow: 0 25px 57px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08);
 --ha-dialog-scrim-backdrop-filter: blur(28px) saturate(173%);
 --ha-font-family-body: "Segoe UI", Noto, sans-serif;
 --ha-font-family-code: ui-monospace, monospace;
@@ -1183,9 +1183,9 @@ Desk:
       bubble-select-arrow: "0px"
       card-background-color: "#eaf7ed"
       card-mod-card: |
-        ha-card{position:relative;overflow:hidden;border:0;box-shadow:none;border-radius:0 var(--console-cap) var(--console-cap) var(--console-cap);background:var(--console-orange) 0 0/42% var(--console-bar) no-repeat,var(--console-peach) 44% 0/14% var(--console-bar) no-repeat,var(--console-lavender) 60% 0/12% var(--console-bar) no-repeat,var(--console-blue) 0 var(--console-bar)/12px calc(100% - var(--console-bar)) no-repeat,var(--primary-background-color);padding:calc(var(--console-bar) + 8px) 12px 12px 22px;text-transform:uppercase}
-        ha-card::before{content:"";position:absolute;left:0;top:0;width:42%;height:var(--console-bar);border-radius:0 999px 999px 0;background:var(--console-orange,var(--primary-color));pointer-events:none}
-        ha-card::after{content:"47";position:absolute;top:0;right:8px;width:40px;height:var(--console-bar);border-radius:0 0 10px 10px;background:var(--console-red);color:var(--console-ink);text-align:center;font:700 12px/var(--console-bar) var(--ha-font-family-heading)}
+        ha-card{position:relative;overflow:hidden;border:0;box-shadow:none;border-radius:0;background:linear-gradient(var(--console-peach),var(--console-peach)) 118px 0/24% var(--console-bar) no-repeat,linear-gradient(var(--console-lavender),var(--console-lavender)) 70% 0/16% var(--console-bar) no-repeat,var(--primary-background-color);padding:calc(var(--console-bar) + 14px) 12px 22px 36px;text-transform:uppercase}
+        ha-card::before{content:"";position:absolute;z-index:1;left:0;top:0;bottom:0;width:108px;box-sizing:border-box;pointer-events:none;border-top:var(--console-bar) solid var(--console-orange,var(--primary-color));border-left:18px solid var(--console-orange,var(--primary-color));border-bottom:16px solid var(--console-orange,var(--primary-color));border-top-left-radius:52px;border-bottom-left-radius:40px}
+        ha-card::after{content:"47";position:absolute;z-index:2;top:0;right:8px;width:40px;height:var(--console-bar);border-radius:0 0 10px 10px;background:var(--console-red);color:var(--console-ink);text-align:center;font:700 12px/var(--console-bar) var(--ha-font-family-heading)}
 
       card-mod-theme: "desk"
       codemirror-atom: "#8b489a"
@@ -1337,9 +1337,9 @@ Desk:
       bubble-select-arrow: "0px"
       card-background-color: "#070b08"
       card-mod-card: |
-        ha-card{position:relative;overflow:hidden;border:0;box-shadow:none;border-radius:0 var(--console-cap) var(--console-cap) var(--console-cap);background:var(--console-orange) 0 0/42% var(--console-bar) no-repeat,var(--console-peach) 44% 0/14% var(--console-bar) no-repeat,var(--console-lavender) 60% 0/12% var(--console-bar) no-repeat,var(--console-blue) 0 var(--console-bar)/12px calc(100% - var(--console-bar)) no-repeat,var(--primary-background-color);padding:calc(var(--console-bar) + 8px) 12px 12px 22px;text-transform:uppercase}
-        ha-card::before{content:"";position:absolute;left:0;top:0;width:42%;height:var(--console-bar);border-radius:0 999px 999px 0;background:var(--console-orange,var(--primary-color));pointer-events:none}
-        ha-card::after{content:"47";position:absolute;top:0;right:8px;width:40px;height:var(--console-bar);border-radius:0 0 10px 10px;background:var(--console-red);color:var(--console-ink);text-align:center;font:700 12px/var(--console-bar) var(--ha-font-family-heading)}
+        ha-card{position:relative;overflow:hidden;border:0;box-shadow:none;border-radius:0;background:linear-gradient(var(--console-peach),var(--console-peach)) 118px 0/24% var(--console-bar) no-repeat,linear-gradient(var(--console-lavender),var(--console-lavender)) 70% 0/16% var(--console-bar) no-repeat,var(--primary-background-color);padding:calc(var(--console-bar) + 14px) 12px 22px 36px;text-transform:uppercase}
+        ha-card::before{content:"";position:absolute;z-index:1;left:0;top:0;bottom:0;width:108px;box-sizing:border-box;pointer-events:none;border-top:var(--console-bar) solid var(--console-orange,var(--primary-color));border-left:18px solid var(--console-orange,var(--primary-color));border-bottom:16px solid var(--console-orange,var(--primary-color));border-top-left-radius:52px;border-bottom-left-radius:40px}
+        ha-card::after{content:"47";position:absolute;z-index:2;top:0;right:8px;width:40px;height:var(--console-bar);border-radius:0 0 10px 10px;background:var(--console-red);color:var(--console-ink);text-align:center;font:700 12px/var(--console-bar) var(--ha-font-family-heading)}
 
       card-mod-theme: "desk"
       codemirror-atom: "#f4aeff"
@@ -1791,7 +1791,7 @@ Tokyo Night:
       blue-grey-color: "#b8c8d9"
       brown-color: "#75493d"
       bubble-accent-color: "#7aa2f7"
-      bubble-border-radius: "24px"
+      bubble-border-radius: "28px"
       bubble-button-border-radius: "999px"
       bubble-icon-background-color: "rgba(122, 162, 247, 0.18)"
       bubble-icon-border-radius: "999px"
@@ -1834,17 +1834,17 @@ Tokyo Night:
       error-color: "#f7768e"
       green-color: "#9ece6a"
       grey-color: "#ababab"
-      ha-border-radius-lg: "24px"
-      ha-border-radius-md: "16px"
+      ha-border-radius-lg: "28px"
+      ha-border-radius-md: "18px"
       ha-border-radius-pill: "999px"
       ha-border-radius-sm: "8px"
-      ha-border-radius-xl: "24px"
+      ha-border-radius-xl: "28px"
       ha-card-backdrop-filter: "blur(28px) saturate(173%)"
       ha-card-background: "rgba(36, 40, 59, 0.30)"
       ha-card-border-color: "rgba(255, 255, 255, 0.46)"
-      ha-card-border-radius: "24px"
+      ha-card-border-radius: "28px"
       ha-card-border-width: "1px"
-      ha-card-box-shadow: "0 16px 37px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08)"
+      ha-card-box-shadow: "0 25px 57px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08)"
       ha-dialog-scrim-backdrop-filter: "blur(28px) saturate(173%)"
       ha-font-family-body: "\"Segoe UI\", Noto, sans-serif"
       ha-font-family-code: "ui-monospace, monospace"
@@ -1934,7 +1934,7 @@ Tokyo Night:
 --blue-grey-color: #b8c8d9;
 --brown-color: #75493d;
 --bubble-accent-color: #7aa2f7;
---bubble-border-radius: 24px;
+--bubble-border-radius: 28px;
 --bubble-button-border-radius: 999px;
 --bubble-icon-background-color: rgba(122, 162, 247, 0.18);
 --bubble-icon-border-radius: 999px;
@@ -1977,17 +1977,17 @@ Tokyo Night:
 --error-color: #f7768e;
 --green-color: #9ece6a;
 --grey-color: #ababab;
---ha-border-radius-lg: 24px;
---ha-border-radius-md: 16px;
+--ha-border-radius-lg: 28px;
+--ha-border-radius-md: 18px;
 --ha-border-radius-pill: 999px;
 --ha-border-radius-sm: 8px;
---ha-border-radius-xl: 24px;
+--ha-border-radius-xl: 28px;
 --ha-card-backdrop-filter: blur(28px) saturate(173%);
 --ha-card-background: rgba(36, 40, 59, 0.30);
 --ha-card-border-color: rgba(255, 255, 255, 0.46);
---ha-card-border-radius: 24px;
+--ha-card-border-radius: 28px;
 --ha-card-border-width: 1px;
---ha-card-box-shadow: 0 16px 37px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08);
+--ha-card-box-shadow: 0 25px 57px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08);
 --ha-dialog-scrim-backdrop-filter: blur(28px) saturate(173%);
 --ha-font-family-body: "Segoe UI", Noto, sans-serif;
 --ha-font-family-code: ui-monospace, monospace;
@@ -2087,7 +2087,7 @@ Desk:
       blue-grey-color: "#b8c8d9"
       brown-color: "#fcb4b2"
       bubble-accent-color: "#ffb2be"
-      bubble-border-radius: "24px"
+      bubble-border-radius: "28px"
       bubble-button-border-radius: "999px"
       bubble-icon-background-color: "rgba(255, 178, 190, 0.18)"
       bubble-icon-border-radius: "999px"
@@ -2130,17 +2130,17 @@ Desk:
       error-color: "#ffb3b4"
       green-color: "#a5d560"
       grey-color: "#ababab"
-      ha-border-radius-lg: "24px"
-      ha-border-radius-md: "16px"
+      ha-border-radius-lg: "28px"
+      ha-border-radius-md: "18px"
       ha-border-radius-pill: "999px"
       ha-border-radius-sm: "8px"
-      ha-border-radius-xl: "24px"
+      ha-border-radius-xl: "28px"
       ha-card-backdrop-filter: "blur(28px) saturate(173%)"
       ha-card-background: "rgba(31, 48, 38, 0.65)"
       ha-card-border-color: "rgba(255, 255, 255, 0.46)"
-      ha-card-border-radius: "24px"
+      ha-card-border-radius: "28px"
       ha-card-border-width: "1px"
-      ha-card-box-shadow: "0 16px 37px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08)"
+      ha-card-box-shadow: "0 25px 57px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08)"
       ha-dialog-scrim-backdrop-filter: "blur(28px) saturate(173%)"
       ha-font-family-body: "\"Segoe UI\", Noto, sans-serif"
       ha-font-family-code: "ui-monospace, monospace"
@@ -2231,7 +2231,7 @@ Desk:
 --blue-grey-color: #b8c8d9;
 --brown-color: #fcb4b2;
 --bubble-accent-color: #ffb2be;
---bubble-border-radius: 24px;
+--bubble-border-radius: 28px;
 --bubble-button-border-radius: 999px;
 --bubble-icon-background-color: rgba(255, 178, 190, 0.18);
 --bubble-icon-border-radius: 999px;
@@ -2274,17 +2274,17 @@ Desk:
 --error-color: #ffb3b4;
 --green-color: #a5d560;
 --grey-color: #ababab;
---ha-border-radius-lg: 24px;
---ha-border-radius-md: 16px;
+--ha-border-radius-lg: 28px;
+--ha-border-radius-md: 18px;
 --ha-border-radius-pill: 999px;
 --ha-border-radius-sm: 8px;
---ha-border-radius-xl: 24px;
+--ha-border-radius-xl: 28px;
 --ha-card-backdrop-filter: blur(28px) saturate(173%);
 --ha-card-background: rgba(31, 48, 38, 0.65);
 --ha-card-border-color: rgba(255, 255, 255, 0.46);
---ha-card-border-radius: 24px;
+--ha-card-border-radius: 28px;
 --ha-card-border-width: 1px;
---ha-card-box-shadow: 0 16px 37px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08);
+--ha-card-box-shadow: 0 25px 57px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.46),inset 0 -1px 0 rgba(255,255,255,.08);
 --ha-dialog-scrim-backdrop-filter: blur(28px) saturate(173%);
 --ha-font-family-body: "Segoe UI", Noto, sans-serif;
 --ha-font-family-code: ui-monospace, monospace;

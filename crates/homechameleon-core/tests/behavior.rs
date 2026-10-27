@@ -101,6 +101,8 @@ fn each_style_has_its_own_shape() {
                 assert!(result.yaml.contains("var(--primary-color)"));
                 assert!(result.yaml.contains("Antonio"));
                 assert!(result.yaml.contains("content:\"47\""));
+                assert!(result.yaml.contains("border-top-left-radius:52px"));
+                assert!(result.yaml.contains("border-bottom-left-radius:40px"));
                 assert!(!result.yaml.contains("backdrop-filter"));
             }
         }

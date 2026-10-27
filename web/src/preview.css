@@ -292,17 +292,68 @@
 
 .lcars { display: none; }
 
-/* Sheer: frosted panels, rim, sheen, color behind the blur. */
+/* Sheer: vivid orbs behind frosted translucent panes. */
 .stage[data-style="sheer"] {
-  background-image:
-    radial-gradient(ellipse at 0 0, color-mix(in srgb, var(--primary-color) 55%, transparent), transparent 48%),
-    radial-gradient(ellipse at 100% 100%, color-mix(in srgb, var(--accent-color) 42%, transparent), transparent 46%);
+  background-color: #070910;
+  overflow: hidden;
 }
 
+.stage[data-style="sheer"]::before {
+  content: "";
+  position: absolute;
+  inset: -18%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 16% 20%, color-mix(in srgb, var(--primary-color) 92%, white) 0, transparent 36%),
+    radial-gradient(circle at 82% 12%, color-mix(in srgb, var(--accent-color) 88%, white) 0, transparent 34%),
+    radial-gradient(circle at 88% 74%, color-mix(in srgb, var(--info-color) 86%, white) 0, transparent 38%),
+    radial-gradient(circle at 18% 84%, color-mix(in srgb, var(--error-color) 80%, white) 0, transparent 36%),
+    radial-gradient(circle at 48% 46%, color-mix(in srgb, var(--warning-color) 72%, white) 0, transparent 32%);
+  filter: blur(26px) saturate(170%);
+}
+
+.stage[data-style="sheer"] .sidebar,
+.stage[data-style="sheer"] .main {
+  position: relative;
+  z-index: 1;
+}
+
+.stage[data-style="sheer"] .card,
+.stage[data-style="sheer"] .chip,
+.stage[data-style="sheer"] .tab,
+.stage[data-style="sheer"] .side-btn,
+.stage[data-style="sheer"] button,
+.stage[data-style="sheer"] .switch,
 .stage[data-style="sheer"] .sidebar {
-  background: color-mix(in srgb, var(--sidebar-background-color) 46%, transparent);
-  -webkit-backdrop-filter: var(--ha-card-backdrop-filter, blur(18px) saturate(160%));
-  backdrop-filter: var(--ha-card-backdrop-filter, blur(18px) saturate(160%));
+  background-color: rgba(255, 255, 255, 0.14);
+  background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.05) 36%, rgba(255, 255, 255, 0.02) 60%);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  box-shadow:
+    0 22px 56px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  -webkit-backdrop-filter: blur(26px) saturate(172%);
+  backdrop-filter: blur(26px) saturate(172%);
+}
+
+.stage[data-style="sheer"] .card {
+  border-radius: 28px;
+  background-color: color-mix(in srgb, var(--primary-background-color) 28%, rgba(255, 255, 255, 0.16));
+}
+
+.stage[data-style="sheer"] .chip,
+.stage[data-style="sheer"] .tab,
+.stage[data-style="sheer"] .side-btn,
+.stage[data-style="sheer"] button,
+.stage[data-style="sheer"] .switch {
+  border-radius: 999px;
+}
+
+.stage[data-style="sheer"] .tab[aria-current="page"],
+.stage[data-style="sheer"] .side-btn[aria-current="page"],
+.stage[data-style="sheer"] button {
+  background-color: color-mix(in srgb, var(--primary-color) 48%, rgba(255, 255, 255, 0.2));
+  color: var(--text-primary-color);
 }
 
 .stage[data-style="sheer"] .card::before {
@@ -311,7 +362,7 @@
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.05) 38%, transparent 58%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.08) 26%, transparent 48%);
 }
 
 .stage[data-style="sheer"] .card::after {
@@ -320,17 +371,27 @@
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
 .stage[data-style="sheer"] .card > * {
   position: relative;
   z-index: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+
+.stage[data-style="sheer"] .switch i {
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .stage[data-style="sheer"] .card,
   .stage[data-style="sheer"] .chip,
+  .stage[data-style="sheer"] .tab,
+  .stage[data-style="sheer"] .side-btn,
+  .stage[data-style="sheer"] button,
+  .stage[data-style="sheer"] .switch,
   .stage[data-style="sheer"] .sidebar {
     background: var(--secondary-background-color);
     backdrop-filter: none;
@@ -526,12 +587,56 @@
 .stage[data-style="flat"] .main { gap: 18px; }
 .stage[data-style="flat"] .card { padding: 18px; }
 
-/* Starship Console: bars, caps, a rail, numeric blocks, condensed caps. */
+/* Starship Console: sweep elbows, capped bars, numeric blocks, condensed caps. */
 .stage[data-style="starship"] {
   border-radius: 0;
+  background: #000;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-family: Antonio, var(--ha-font-family-body), sans-serif;
+}
+
+.stage[data-style="starship"]::before,
+.stage[data-style="starship"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  z-index: 3;
+  box-sizing: border-box;
+  pointer-events: none;
+  border-left: 18px solid var(--console-orange, var(--primary-color));
+}
+
+.stage[data-style="starship"]::before {
+  top: 0;
+  width: 148px;
+  height: 74px;
+  border-top: 22px solid var(--console-orange, var(--primary-color));
+  border-top-left-radius: 48px;
+}
+
+.stage[data-style="starship"]::after {
+  bottom: 0;
+  width: 132px;
+  height: 72px;
+  border-bottom: 18px solid var(--console-orange, var(--primary-color));
+  border-bottom-left-radius: 48px;
+}
+
+.stage[data-style="starship"] .sidebar {
+  position: relative;
+  background: transparent;
+  padding: 80px 8px 80px 26px;
+}
+
+.stage[data-style="starship"] .sidebar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 74px;
+  bottom: 72px;
+  width: 18px;
+  background: var(--console-orange, var(--primary-color));
 }
 
 .stage[data-style="starship"] .view-title,
@@ -557,11 +662,38 @@
   font-size: 14px;
 }
 
+.stage[data-style="starship"] .main {
+  padding: 0 18px 18px 8px;
+  gap: 20px;
+}
+
+.stage[data-style="starship"] .top {
+  min-height: 22px;
+  align-items: flex-start;
+  padding-left: 92px;
+  margin: 0;
+}
+
 .stage[data-style="starship"] .view-title {
-  background: var(--console-orange, var(--primary-color));
+  background: var(--console-peach, var(--warning-color));
   color: var(--console-ink, #000);
-  padding: 6px 18px 6px 12px;
-  border-radius: 0 16px 16px 0;
+  margin: 0;
+  padding: 0 14px;
+  height: 22px;
+  font-size: 16px;
+  line-height: 22px;
+  border-radius: 0 14px 14px 0;
+}
+
+.stage[data-style="starship"] .code {
+  height: 22px;
+  min-width: 36px;
+}
+
+.stage[data-style="starship"] .tab {
+  height: 22px;
+  padding: 0 12px;
+  line-height: 22px;
 }
 
 .stage[data-style="starship"] .tab {
@@ -590,27 +722,46 @@
 .stage[data-style="starship"] .side-btn:nth-child(4) { background: var(--console-red, var(--error-color)); }
 .stage[data-style="starship"] .side-btn[aria-current="page"] { background: var(--console-orange, var(--primary-color)); }
 
-.stage[data-style="starship"] .grid { gap: 16px; }
+.stage[data-style="starship"] .chips { margin-top: 6px; }
+.stage[data-style="starship"] .grid { gap: 18px; margin-top: 6px; }
 
 .stage[data-style="starship"] .card {
   border: 0;
   overflow: hidden;
-  border-radius: 0 var(--console-cap, 26px) var(--console-cap, 26px) var(--console-cap, 26px);
+  border-radius: 0;
   box-shadow: none;
-  padding: 10px 12px 14px 24px;
-  background-color: var(--primary-background-color);
-  background-image: linear-gradient(var(--console-blue, var(--info-color)), var(--console-blue, var(--info-color)));
-  background-repeat: no-repeat;
-  background-size: 12px calc(100% - 28px);
-  background-position: 0 28px;
+  padding: 34px 16px 26px 36px;
+  background: #000;
+}
+
+.stage[data-style="starship"] .card::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 112px;
+  box-sizing: border-box;
+  pointer-events: none;
+  border-top: var(--console-bar, 20px) solid var(--console-orange, var(--primary-color));
+  border-left: 18px solid var(--console-orange, var(--primary-color));
+  border-bottom: 16px solid var(--console-orange, var(--primary-color));
+  border-top-left-radius: 52px;
+  border-bottom-left-radius: 40px;
 }
 
 .stage[data-style="starship"] .lcars {
   display: flex;
   gap: 6px;
   align-items: center;
-  height: var(--console-bar, 22px);
-  margin: 0 0 12px;
+  position: absolute;
+  z-index: 2;
+  left: 120px;
+  right: 8px;
+  top: 0;
+  height: var(--console-bar, 20px);
+  margin: 0;
 }
 
 .stage[data-style="starship"] .bar {

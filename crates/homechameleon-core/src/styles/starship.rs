@@ -1,5 +1,5 @@
 //! Starship Console: an original console layout.
-//! Thick color bars, rounded caps, a sweep corner, and small numeric blocks.
+//! Thick color bars, sweep elbows, and small numeric blocks.
 //! Names, marks, and type from that television series are not used.
 
 use crate::color::Rgb;
@@ -16,7 +16,7 @@ pub struct ConsoleBlocks {
 }
 
 pub fn card_mod_css() -> &'static str {
-    "ha-card{position:relative;overflow:hidden;border:0;box-shadow:none;border-radius:0 var(--console-cap) var(--console-cap) var(--console-cap);background:var(--console-orange) 0 0/42% var(--console-bar) no-repeat,var(--console-peach) 44% 0/14% var(--console-bar) no-repeat,var(--console-lavender) 60% 0/12% var(--console-bar) no-repeat,var(--console-blue) 0 var(--console-bar)/12px calc(100% - var(--console-bar)) no-repeat,var(--primary-background-color);padding:calc(var(--console-bar) + 8px) 12px 12px 22px;text-transform:uppercase}\nha-card::before{content:\"\";position:absolute;left:0;top:0;width:42%;height:var(--console-bar);border-radius:0 999px 999px 0;background:var(--console-orange,var(--primary-color));pointer-events:none}\nha-card::after{content:\"47\";position:absolute;top:0;right:8px;width:40px;height:var(--console-bar);border-radius:0 0 10px 10px;background:var(--console-red);color:var(--console-ink);text-align:center;font:700 12px/var(--console-bar) var(--ha-font-family-heading)}\n"
+    "ha-card{position:relative;overflow:hidden;border:0;box-shadow:none;border-radius:0;background:linear-gradient(var(--console-peach),var(--console-peach)) 118px 0/24% var(--console-bar) no-repeat,linear-gradient(var(--console-lavender),var(--console-lavender)) 70% 0/16% var(--console-bar) no-repeat,var(--primary-background-color);padding:calc(var(--console-bar) + 14px) 12px 22px 36px;text-transform:uppercase}\nha-card::before{content:\"\";position:absolute;z-index:1;left:0;top:0;bottom:0;width:108px;box-sizing:border-box;pointer-events:none;border-top:var(--console-bar) solid var(--console-orange,var(--primary-color));border-left:18px solid var(--console-orange,var(--primary-color));border-bottom:16px solid var(--console-orange,var(--primary-color));border-top-left-radius:52px;border-bottom-left-radius:40px}\nha-card::after{content:\"47\";position:absolute;z-index:2;top:0;right:8px;width:40px;height:var(--console-bar);border-radius:0 0 10px 10px;background:var(--console-red);color:var(--console-ink);text-align:center;font:700 12px/var(--console-bar) var(--ha-font-family-heading)}\n"
 }
 
 /// Pastel blocks harmonized toward the user's primary, light enough for black ink.

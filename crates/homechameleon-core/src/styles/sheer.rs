@@ -18,8 +18,8 @@ pub fn shadow(glow: f64, dark: bool) -> String {
         0.12 + t * 0.16
     };
     let rim = 0.28 + t * 0.40;
-    let y = 10.0 + t * 14.0;
-    let blur = 24.0 + t * 28.0;
+    let y = 18.0 + t * 16.0;
+    let blur = 40.0 + t * 36.0;
     format!(
         "0 {y:.0}px {blur:.0}px rgba(0,0,0,{drop_a:.2}),inset 0 1px 0 rgba(255,255,255,{rim:.2}),inset 0 -1px 0 rgba(255,255,255,.08)"
     )

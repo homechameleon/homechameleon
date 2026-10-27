@@ -63,7 +63,7 @@ impl StyleId {
     pub fn default_tweaks(self) -> Tweaks {
         match self {
             Self::Sheer => Tweaks {
-                roundness: 24.0,
+                roundness: 28.0,
                 blur: 28.0,
                 transparency: 70.0,
                 glow: 46.0,
