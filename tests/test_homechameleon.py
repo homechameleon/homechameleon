@@ -64,12 +64,20 @@ async def test_config_flow_is_single_instance(hass):
     assert again["reason"] == "single_instance_allowed"
 
 
-async def test_panel_is_admin_only(hass, setup_hc):
-    """The sidebar item is HomeChameleon and hidden from non-admins."""
+async def test_panel_is_an_iframe_of_the_editor(hass, setup_hc):
+    """The sidebar loads the editor document, and only for admins.
+
+    A module_url pointed at index.html is imported as JavaScript and fails
+    with "Unable to load the panel source".
+    """
     panel = hass.data[DATA_PANELS]["homechameleon"]
+    assert panel.component_name == "iframe"
     assert panel.sidebar_title == "HomeChameleon"
+    assert panel.sidebar_icon == "mdi:palette"
+    assert panel.frontend_url_path == "homechameleon"
     assert panel.require_admin is True
-    assert "panel=1" in panel.config["_panel_custom"]["module_url"]
+    assert panel.config == {"url": "/homechameleon_static/index.html?panel=1"}
+    assert "_panel_custom" not in panel.config
 
 
 async def test_styles_require_auth_and_admin(hass, setup_hc, hass_client, hass_client_no_auth, hass_read_only_access_token):

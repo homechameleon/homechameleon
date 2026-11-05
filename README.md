@@ -1,16 +1,36 @@
 # HomeChameleon
 
-Turn your photos into complete Home Assistant themes, in the style you pick.
+Turn a wallpaper or a photo into a Home Assistant theme, edit it live, and apply it in one click.
+
+- Build the palette from a wallpaper or a photo. You can also start from an Omarchy `colors.toml`, a Base16 scheme, a hex list, or a `homechameleon-palette/1` file.
+- Edit live. The card preview follows the theme as you change it.
+- Apply in one click from the Home Assistant sidebar, or export a zip from the standalone editor.
+- Pick a style: Bubbles, Sheer, Material, Starship Console, or Flat.
+- Use dark, light, or both.
 
 ![Sheer, Starship Console, Bubbles, Material, and Flat](docs/hero.png)
+
+![HomeChameleon editor with the Tokyo Night palette loaded and a Sheer card preview](docs/screenshots/editor.png)
+
+The same editor in light mode:
+
+![HomeChameleon editor in light mode](docs/screenshots/editor-light.png)
+
+Dark mode, with the style list in view:
+
+![HomeChameleon editor in dark mode](docs/screenshots/editor-dark.png)
+
+These shots are from the local editor, using the Tokyo Night palette in [`addon/fixtures/tokyo-night.colors.toml`](addon/fixtures/tokyo-night.colors.toml).
 
 HomeChameleon is not affiliated with or endorsed by the Open Home Foundation or Home Assistant, and is not affiliated with ha-chameleon. ha-chameleon colors RGB lights. HomeChameleon builds dashboard themes.
 
 An unofficial Cursor and Grok Bot plugin, Holly for Home Assistant, lives in [`holly-for-home-assistant/`](holly-for-home-assistant/).
 
+Version 0.1.0 is described in [CHANGELOG.md](CHANGELOG.md). Draft release notes, not yet published, are in [docs/RELEASE_NOTES_v0.1.0.md](docs/RELEASE_NOTES_v0.1.0.md).
+
 ## Styles
 
-One sample palette, in dark mode. Each style has its own shape.
+One sample palette, in dark mode. Each style has its own shape. The dark and light pairs below are the same Tokyo Night palette.
 
 ### Sheer
 
@@ -18,11 +38,19 @@ Frosted panes over colorful orbs, with a light rim, a soft shadow, and near-whit
 
 ![Sheer](docs/styles/sheer.png)
 
+![Sheer, dark](docs/screenshots/sheer-dark.png)
+
+![Sheer, light](docs/screenshots/sheer-light.png)
+
 ### Bubbles
 
 Blob cards, a puffy cushion, and chunky round controls.
 
 ![Bubbles](docs/styles/bubbles.png)
+
+![Bubbles, dark](docs/screenshots/bubbles-dark.png)
+
+![Bubbles, light](docs/screenshots/bubbles-light.png)
 
 ### Material
 
@@ -30,17 +58,29 @@ Tonal surfaces, elevation, and a 12 to 28 pixel shape scale.
 
 ![Material](docs/styles/material.png)
 
+![Material, dark](docs/screenshots/material-dark.png)
+
+![Material, light](docs/screenshots/material-light.png)
+
 ### Flat
 
 No shadows. Square controls, large type, and solid color blocks.
 
 ![Flat](docs/styles/flat.png)
 
+![Flat, dark](docs/screenshots/flat-dark.png)
+
+![Flat, light](docs/screenshots/flat-light.png)
+
 ### Starship Console
 
 A sweep-elbow console: thick capped bars, numeric labels, and condensed uppercase type.
 
 ![Starship Console](docs/styles/starship.png)
+
+![Starship Console, dark](docs/screenshots/starship-dark.png)
+
+![Starship Console, light](docs/screenshots/starship-light.png)
 
 ## What works today
 
@@ -60,9 +100,9 @@ In the standalone editor, photos stay in the browser. It does not upload them an
 
 The [`omarchy/`](omarchy/) folder is a shell helper for Omarchy. `homechameleon-sync --export` writes `homechameleon-palette/1` JSON from a `colors.toml` file. Details are in [omarchy/README.md](omarchy/README.md).
 
-## Install on Home Assistant
+## Install with HACS
 
-HomeChameleon also installs as a custom integration through HACS. It adds a sidebar panel named HomeChameleon and an admin-only API. The panel is the same editor. Apply writes the theme the browser already built. The default-theme checkbox starts off. Apply can target one dashboard view, and Undo theme restores the previous themes. The downloadable zip still works if you open the editor on its own.
+HomeChameleon installs as a custom integration through HACS. It adds a sidebar panel named HomeChameleon and an admin-only API. The panel is the same editor. Apply writes the theme the browser already built. The default-theme checkbox starts off. Apply can target one dashboard view, and Undo theme restores the previous themes. The downloadable zip still works if you open the editor on its own.
 
 1. In HACS, add this repository as a custom repository (category: Integration): `https://github.com/homechameleon/homechameleon`
 2. Install HomeChameleon and restart Home Assistant.
@@ -76,6 +116,23 @@ frontend:
 HomeChameleon does not edit `configuration.yaml`. If those lines are missing, it raises a Repairs issue that shows the same lines.
 
 4. Go to Settings, then Devices & services, and add HomeChameleon. Open the HomeChameleon sidebar item. That page is limited to administrators.
+
+## Install for Omarchy
+
+HomeChameleon for Omarchy sends the current Omarchy palette to the integration whenever the Omarchy theme changes. The helper lives in [`omarchy/`](omarchy/). An AUR package is planned and is not published yet. Install from a checkout of this repository.
+
+1. Install the HomeChameleon integration in Home Assistant first (see above). Create a long-lived access token from an administrator account: Profile, then Security, then Long-lived access tokens.
+2. On the Omarchy machine, run setup from the checkout:
+
+```bash
+omarchy/bin/homechameleon-setup
+```
+
+3. Setup asks for the Home Assistant URL, the token (input is hidden), a style id (`sheer`, `bubbles`, `material`, `flat`, or `starship`), and whether to send the desktop background. The background stays off unless you turn it on.
+4. Setup writes `~/.config/homechameleon/config` with mode 600, installs the theme-set hook, and can also install the palette template and a systemd user path unit. Any file it would change is backed up first.
+5. In Home Assistant, set your profile theme to the default theme so the synced theme is the one you see.
+
+Then `omarchy/bin/homechameleon-sync` sends the current palette. `homechameleon-sync --preview` asks for a preview and writes nothing. Details, privacy notes, and uninstall are in [omarchy/README.md](omarchy/README.md).
 
 ## Install without HACS
 

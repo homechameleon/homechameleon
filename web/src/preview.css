@@ -381,7 +381,8 @@
 
 .stage[data-style="sheer"] .view-title,
 .stage[data-style="sheer"] .card h3,
-.stage[data-style="sheer"] .card strong {
+.stage[data-style="sheer"] .card strong,
+.stage[data-style="sheer"] .entity > span:first-child {
   color: #fbfaf8;
   font-weight: 700;
   text-shadow:
@@ -618,6 +619,7 @@
 .stage[data-style="starship"] {
   border-radius: 0;
   background: #000;
+  color: #d7e0f5;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-family: Antonio, var(--ha-font-family-body), sans-serif;
@@ -751,6 +753,11 @@
 
 .stage[data-style="starship"] .chips { margin-top: 6px; }
 .stage[data-style="starship"] .grid { gap: 18px; margin-top: 6px; }
+
+.stage[data-style="starship"] .card,
+.stage[data-style="starship"] .muted {
+  color: #d7e0f5;
+}
 
 .stage[data-style="starship"] .card {
   border: 0;

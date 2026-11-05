@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from homeassistant.components import frontend, panel_custom
+from homeassistant.components import frontend
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.core import HomeAssistant
 
@@ -12,6 +12,10 @@ from .const import PANEL_ICON, PANEL_PATH, PANEL_TITLE, STATIC_URL
 
 PANEL_DIR = Path(__file__).parent / "panel"
 _REGISTERED = "homechameleon_static_registered"
+# The built editor is an HTML document. A custom panel module_url is imported
+# as JavaScript, so pointing one at this file shows "Unable to load the panel
+# source". The built-in iframe panel loads the document instead.
+EDITOR_URL = f"{STATIC_URL}/index.html?panel=1"
 
 
 async def async_register(hass: HomeAssistant) -> None:
@@ -21,14 +25,13 @@ async def async_register(hass: HomeAssistant) -> None:
             [StaticPathConfig(STATIC_URL, str(PANEL_DIR), False)]
         )
         hass.data[_REGISTERED] = True
-    await panel_custom.async_register_panel(
+    frontend.async_register_built_in_panel(
         hass,
-        frontend_url_path=PANEL_PATH,
-        webcomponent_name="homechameleon-panel",
+        "iframe",
         sidebar_title=PANEL_TITLE,
         sidebar_icon=PANEL_ICON,
-        module_url=f"{STATIC_URL}/index.html?panel=1",
-        embed_iframe=True,
+        frontend_url_path=PANEL_PATH,
+        config={"url": EDITOR_URL},
         require_admin=True,
     )
 
