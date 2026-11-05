@@ -2,7 +2,43 @@
 
 Turn your photos into complete Home Assistant themes. This add-on is the install path when HACS is not in use.
 
+![Sheer, Starship Console, Bubbles, Material, and Flat](../docs/hero.png)
+
 HomeChameleon is not affiliated with or endorsed by the Open Home Foundation or Home Assistant.
+
+## Styles
+
+One sample palette, in dark mode.
+
+### Sheer
+
+Frosted panes over colorful orbs, with a light rim and a soft shadow.
+
+![Sheer](../docs/styles/sheer.png)
+
+### Bubbles
+
+Blob cards, a puffy cushion, and chunky round controls.
+
+![Bubbles](../docs/styles/bubbles.png)
+
+### Material
+
+Tonal surfaces, elevation, and a 12 to 28 pixel shape scale.
+
+![Material](../docs/styles/material.png)
+
+### Flat
+
+No shadows. Square controls, large type, and solid color blocks.
+
+![Flat](../docs/styles/flat.png)
+
+### Starship Console
+
+A sweep-elbow console: thick capped bars, numeric labels, and condensed uppercase type.
+
+![Starship Console](../docs/styles/starship.png)
 
 ## What gets written
 

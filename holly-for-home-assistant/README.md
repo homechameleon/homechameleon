@@ -57,7 +57,37 @@ Every skill follows the same rules:
 | `dashboard-builder` | Proposes one view from live entities and writes it on yes. |
 | `homechameleon-theming` | Installs HomeChameleon on request, themes from your images, previews, then applies with backup and undo. |
 
-Theme styles, when you ask for one, are sheer, bubbles, material, starship (Starship Console in the editor), and flat.
+Theme styles, when you ask for one, are sheer, bubbles, material, starship (Starship Console in the editor), and flat. The same sample palette, in dark mode:
+
+### Sheer
+
+Frosted panes over colorful orbs, with a light rim and a soft shadow.
+
+![Sheer](../docs/styles/sheer.png)
+
+### Bubbles
+
+Blob cards, a puffy cushion, and chunky round controls.
+
+![Bubbles](../docs/styles/bubbles.png)
+
+### Material
+
+Tonal surfaces, elevation, and a 12 to 28 pixel shape scale.
+
+![Material](../docs/styles/material.png)
+
+### Flat
+
+No shadows. Square controls, large type, and solid color blocks.
+
+![Flat](../docs/styles/flat.png)
+
+### Starship Console
+
+A sweep-elbow console: thick capped bars, numeric labels, and condensed uppercase type.
+
+![Starship Console](../docs/styles/starship.png)
 
 ## Links
 

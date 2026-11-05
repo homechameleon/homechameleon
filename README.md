@@ -8,6 +8,8 @@ Turn a wallpaper or a photo into a Home Assistant theme, edit it live, and apply
 - Pick a style: Bubbles, Sheer, Material, Starship Console, or Flat.
 - Use dark, light, or both.
 
+![Sheer, Starship Console, Bubbles, Material, and Flat](docs/hero.png)
+
 ![HomeChameleon editor with the Tokyo Night palette loaded and a Sheer card preview](docs/screenshots/editor.png)
 
 The same editor in light mode:
@@ -28,9 +30,13 @@ Version 0.1.0 is described in [CHANGELOG.md](CHANGELOG.md). Draft release notes,
 
 ## Styles
 
-Sheer is a frosted pane over colorful orbs. Bubbles is puffy and round. Material follows a tonal shape scale. Flat is sharp color blocking. Starship Console is a sweep-elbow console with thick capped bars. Each pair below is the same Tokyo Night palette.
+One sample palette, in dark mode. Each style has its own shape. The dark and light pairs below are the same Tokyo Night palette.
 
 ### Sheer
+
+Frosted panes over colorful orbs, with a light rim, a soft shadow, and near-white titles.
+
+![Sheer](docs/styles/sheer.png)
 
 ![Sheer, dark](docs/screenshots/sheer-dark.png)
 
@@ -38,27 +44,43 @@ Sheer is a frosted pane over colorful orbs. Bubbles is puffy and round. Material
 
 ### Bubbles
 
+Blob cards, a puffy cushion, and chunky round controls.
+
+![Bubbles](docs/styles/bubbles.png)
+
 ![Bubbles, dark](docs/screenshots/bubbles-dark.png)
 
 ![Bubbles, light](docs/screenshots/bubbles-light.png)
 
 ### Material
 
+Tonal surfaces, elevation, and a 12 to 28 pixel shape scale.
+
+![Material](docs/styles/material.png)
+
 ![Material, dark](docs/screenshots/material-dark.png)
 
 ![Material, light](docs/screenshots/material-light.png)
 
-### Starship Console
-
-![Starship Console, dark](docs/screenshots/starship-dark.png)
-
-![Starship Console, light](docs/screenshots/starship-light.png)
-
 ### Flat
+
+No shadows. Square controls, large type, and solid color blocks.
+
+![Flat](docs/styles/flat.png)
 
 ![Flat, dark](docs/screenshots/flat-dark.png)
 
 ![Flat, light](docs/screenshots/flat-light.png)
+
+### Starship Console
+
+A sweep-elbow console: thick capped bars, numeric labels, and condensed uppercase type.
+
+![Starship Console](docs/styles/starship.png)
+
+![Starship Console, dark](docs/screenshots/starship-dark.png)
+
+![Starship Console, light](docs/screenshots/starship-light.png)
 
 ## What works today
 
